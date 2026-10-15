@@ -171,10 +171,11 @@ const Sound = {
 Sound.init();
 
 // ─────────────────────────────────────────────────────────────
-// VOICE ENGINE (Web Speech API Native Russian Speech Synthesis)
+// VOICE ENGINE (Guaranteed Authentic Russian Audio + Web Speech Fallback)
 // ─────────────────────────────────────────────────────────────
 const Voice = {
   enabled: true,
+  currentAudio: null,
   currentUtterance: null,
   voices: [],
 
@@ -201,6 +202,13 @@ const Voice = {
   },
 
   stop() {
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+      } catch (e) {}
+      this.currentAudio = null;
+    }
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
@@ -209,13 +217,56 @@ const Voice = {
     this.currentUtterance = null;
   },
 
-  speak(text, caseId, onStart, onEnd) {
-    if (!this.enabled || typeof window === 'undefined' || !('speechSynthesis' in window)) {
+  speak(text, caseId, stageNum = 1, onStart, onEnd) {
+    if (!this.enabled) {
       if (onStart) onStart();
       return false;
     }
 
     this.stop();
+
+    // 1. Primary: Play authentic natural Russian speech audio file
+    const cid = Number(caseId) || 1;
+    const snum = Number(stageNum) || 1;
+    const audioSrc = `content/audio/case_${cid}_stage_${snum}.mp3`;
+
+    try {
+      const audio = new Audio(audioSrc);
+      this.currentAudio = audio;
+
+      audio.onplay = () => {
+        if (onStart) onStart();
+      };
+
+      audio.onended = () => {
+        this.currentAudio = null;
+        if (onEnd) onEnd();
+      };
+
+      audio.onerror = () => {
+        // Fallback to Web Speech API if audio cannot be loaded
+        this.currentAudio = null;
+        this.speakFallbackSpeechSynthesis(text, caseId, onStart, onEnd);
+      };
+
+      const p = audio.play();
+      if (p !== undefined) {
+        p.catch(() => {
+          this.currentAudio = null;
+          this.speakFallbackSpeechSynthesis(text, caseId, onStart, onEnd);
+        });
+      }
+      return true;
+    } catch (err) {
+      return this.speakFallbackSpeechSynthesis(text, caseId, onStart, onEnd);
+    }
+  },
+
+  speakFallbackSpeechSynthesis(text, caseId, onStart, onEnd) {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      if (onEnd) onEnd();
+      return false;
+    }
 
     try {
       const cleanText = String(text || '').replace(/[«»"']/g, '').trim();
@@ -227,14 +278,13 @@ const Voice = {
       }
       const ruVoices = this.voices.filter(v => v.lang && v.lang.toLowerCase().replace('_', '-').startsWith('ru'));
 
-      // Character-specific voice tuning matching client themes
       const configs = {
-        1: { gender: 'female', pitch: 1.15, rate: 1.02 }, // Айгерим (бизнес-директор, госзакупки)
-        2: { gender: 'male',   pitch: 0.82, rate: 0.95 }, // Бауржан (инженер строитель)
-        3: { gender: 'male',   pitch: 1.08, rate: 1.08 }, // Ерлан (молодой предприниматель)
-        4: { gender: 'male',   pitch: 0.72, rate: 0.90 }, // Владимир Ильич (финдиректор корпорации)
-        5: { gender: 'male',   pitch: 1.00, rate: 1.00 }, // Alex (нерезидент)
-        6: { gender: 'male',   pitch: 0.88, rate: 0.98 }, // Данияр (VIP-партнёр Forte)
+        1: { gender: 'female', pitch: 1.15, rate: 1.02 },
+        2: { gender: 'male',   pitch: 0.82, rate: 0.95 },
+        3: { gender: 'male',   pitch: 1.08, rate: 1.08 },
+        4: { gender: 'male',   pitch: 0.72, rate: 0.90 },
+        5: { gender: 'male',   pitch: 1.00, rate: 1.00 },
+        6: { gender: 'male',   pitch: 0.88, rate: 0.98 },
       };
       const cfg = configs[Number(caseId)] || { pitch: 1.0, rate: 1.0 };
       u.pitch = cfg.pitch;
@@ -250,21 +300,15 @@ const Voice = {
         }
       }
 
-      u.onstart = () => {
-        if (onStart) onStart();
-      };
-      u.onend = () => {
-        if (onEnd) onEnd();
-      };
-      u.onerror = () => {
-        if (onEnd) onEnd();
-      };
+      u.onstart = () => { if (onStart) onStart(); };
+      u.onend = () => { if (onEnd) onEnd(); };
+      u.onerror = () => { if (onEnd) onEnd(); };
 
       this.currentUtterance = u;
       window.speechSynthesis.speak(u);
       return true;
     } catch (e) {
-      if (onStart) onStart();
+      if (onEnd) onEnd();
       return false;
     }
   }
@@ -1127,10 +1171,11 @@ function renderConvo(root, caseData) {
       onComplete: onTypewriterDone
     });
 
-    // Voice Speech Synthesis
+    // Voice Speech
     Voice.speak(
       stage.client_line,
       caseData.id,
+      stage.stage || (stageIdx + 1),
       () => {
         if (avatarFrame) avatarFrame.className = 'client-avatar-frame speaking';
       },
@@ -1158,6 +1203,7 @@ function renderConvo(root, caseData) {
         Voice.speak(
           stage.client_line,
           caseData.id,
+          stage.stage || (stageIdx + 1),
           null,
           () => {
             if (avatarFrame) avatarFrame.className = 'client-avatar-frame';
