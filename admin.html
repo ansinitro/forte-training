@@ -3,56 +3,116 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Forte Business — Панель тренера и битва филиалов</title>
+  <title>Forte Business — Панель тренера (Kahoot-Style Live Arena)</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <style>
-    /* Specific Admin & TV/Projector Styles */
-    .admin-container {
-      max-width: 1380px; margin: 0 auto; padding: 24px 24px 80px;
+    :root {
+      --admin-bg: #031226;
+      --card-bg: #072146;
+      --card-sub: #0c2b5c;
     }
+
+    body {
+      background: var(--admin-bg);
+      color: #fff;
+      font-family: 'Open Sans', sans-serif;
+    }
+
+    .admin-container {
+      max-width: 1440px; margin: 0 auto; padding: 24px 24px 80px;
+    }
+
+    /* Top Bar */
     .admin-topbar {
       display: flex; align-items: center; justify-content: space-between;
       flex-wrap: wrap; gap: 16px; margin-bottom: 24px;
       padding-bottom: 20px; border-bottom: 1.5px solid var(--border);
     }
-    .admin-brand {
-      display: flex; align-items: center; gap: 14px;
-    }
-    .admin-logo { height: 34px; width: auto; }
+    .admin-brand { display: flex; align-items: center; gap: 14px; }
+    .admin-logo { height: 36px; width: auto; }
     .admin-badge {
-      font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 800;
+      font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 900;
       color: #031226; background: var(--fb-sky);
       border-radius: 6px; padding: 4px 10px; letter-spacing: 1.5px;
     }
 
-    /* Status Pill */
-    .status-indicator {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 6px 18px; border-radius: 99px;
-      font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 900;
-      text-transform: uppercase; letter-spacing: 0.6px;
+    /* Kahoot Big TV / Projector Banner */
+    .projector-banner {
+      background: linear-gradient(135deg, #072146 0%, #0c2b5c 50%, #185ac5 100%);
+      border: 2px solid var(--fb-sky);
+      border-radius: 28px; padding: 32px 36px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 24px; margin-bottom: 32px;
+      box-shadow: 0 16px 50px rgba(0,0,0,0.6), 0 0 35px var(--fb-sky-glow);
     }
-    .status-indicator.lobby {
-      background: rgba(240,197,79,0.15); border: 1.5px solid var(--fb-gold); color: var(--fb-gold);
+    .projector-left { display: flex; flex-direction: column; gap: 6px; }
+    .projector-label {
+      font-size: 14px; font-weight: 800; color: var(--fb-sky);
+      text-transform: uppercase; letter-spacing: 1.2px; display: flex; align-items: center; gap: 8px;
     }
-    .status-indicator.active {
-      background: rgba(16,217,138,0.15); border: 1.5px solid var(--green); color: var(--green);
+    .projector-pin {
+      font-family: 'Outfit', sans-serif; font-size: 64px; font-weight: 900;
+      color: #fff; letter-spacing: 4px; line-height: 1; text-shadow: 0 4px 20px rgba(0,0,0,0.5);
     }
-    .status-indicator.finished {
-      background: rgba(97,207,255,0.15); border: 1.5px solid var(--fb-sky); color: var(--fb-sky);
+    .projector-url {
+      font-size: 16px; color: var(--text2); display: flex; align-items: center; gap: 10px;
     }
-    .status-dot {
-      width: 10px; height: 10px; border-radius: 50%;
-      background: currentColor; animation: pulse 1.5s infinite;
+    .url-chip {
+      background: rgba(3,18,38,0.7); border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px 14px; font-family: monospace; font-size: 15px; color: var(--fb-sky);
     }
 
-    /* Action Controls */
-    .admin-controls-bar {
-      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
-      margin-bottom: 28px;
+    /* Synchronous Round Control Center */
+    .round-controller-box {
+      background: var(--surface); border: 2px solid var(--border);
+      border-radius: 24px; padding: 28px 32px; margin-bottom: 32px;
+      box-shadow: var(--shadow); position: relative; overflow: hidden;
+    }
+    .round-controller-box.active-round {
+      border-color: var(--green);
+      box-shadow: 0 10px 40px rgba(16,217,138,0.25);
+    }
+    .round-controller-box.review-round {
+      border-color: var(--fb-gold);
+      box-shadow: 0 10px 40px rgba(240,197,79,0.25);
+    }
+
+    .controller-grid {
+      display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; align-items: center;
+    }
+    @media (max-width: 900px) {
+      .controller-grid { grid-template-columns: 1fr; }
+    }
+
+    .timer-display-box {
+      display: flex; align-items: center; gap: 20px;
+    }
+    .big-timer-val {
+      font-family: 'Outfit', sans-serif; font-size: 58px; font-weight: 900;
+      color: #fff; line-height: 1; min-width: 140px;
+    }
+    .big-timer-val.warning { color: var(--fb-gold); }
+    .big-timer-val.danger { color: var(--red); animation: pulse 0.8s infinite; }
+
+    /* Filial Scope Filter Modal / Card */
+    .scope-box {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 18px; padding: 18px 22px; margin-top: 18px;
+    }
+    .filials-chips-grid {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
+    }
+    .filial-chip-toggle {
+      background: var(--surface3); border: 1px solid var(--border);
+      color: var(--text2); border-radius: 99px; padding: 6px 14px;
+      font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s ease;
+      user-select: none;
+    }
+    .filial-chip-toggle.active {
+      background: var(--fb-sky-dim); border-color: var(--fb-sky); color: #fff;
     }
 
     /* KPI Grid */
@@ -83,17 +143,14 @@
     }
     .kpi-sub { font-size: 13px; color: var(--text2); font-weight: 500; }
 
-    /* Battle & Leaderboard Grid */
+    /* Battle of Filials & Player Leaderboard */
     .battle-grid {
       display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px;
       align-items: start; margin-bottom: 32px;
     }
-    @media (max-width: 960px) {
-      .battle-grid { grid-template-columns: 1fr; }
-    }
+    @media (max-width: 960px) { .battle-grid { grid-template-columns: 1fr; } }
 
-    /* Filial Battle Cards */
-    .filial-battle-box {
+    .filial-battle-box, .player-leaderboard-box {
       background: var(--surface); border: 1.5px solid var(--border);
       border-radius: 24px; padding: 28px; box-shadow: var(--shadow);
     }
@@ -101,14 +158,11 @@
       display: flex; align-items: center; justify-content: space-between;
       margin-bottom: 20px;
     }
-    .filial-list {
-      display: flex; flex-direction: column; gap: 12px;
-    }
+    .filial-list { display: flex; flex-direction: column; gap: 12px; }
     .filial-item {
       background: var(--surface2); border: 1.5px solid var(--border);
       border-radius: 16px; padding: 14px 18px;
-      display: flex; flex-direction: column; gap: 8px;
-      transition: all 0.25s ease;
+      display: flex; flex-direction: column; gap: 8px; transition: all 0.25s ease;
     }
     .filial-item.rank-1 {
       border-color: var(--fb-gold);
@@ -123,12 +177,8 @@
       border-color: #f97316;
       background: linear-gradient(135deg, rgba(249,115,22,0.1), var(--surface2));
     }
-    .filial-item-top {
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .filial-rank-name {
-      display: flex; align-items: center; gap: 12px;
-    }
+    .filial-item-top { display: flex; align-items: center; justify-content: space-between; }
+    .filial-rank-name { display: flex; align-items: center; gap: 12px; }
     .filial-pos-badge {
       font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 900;
       width: 32px; height: 32px; border-radius: 8px;
@@ -138,20 +188,14 @@
     .filial-item.rank-1 .filial-pos-badge { background: var(--fb-gold); color: #031226; }
     .filial-item.rank-2 .filial-pos-badge { background: var(--fb-sky); color: #031226; }
     .filial-item.rank-3 .filial-pos-badge { background: #f97316; color: #fff; }
-
     .filial-title {
       font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 800; color: #fff;
     }
-    .filial-metrics {
-      display: flex; align-items: baseline; gap: 14px;
-    }
+    .filial-metrics { display: flex; align-items: baseline; gap: 14px; }
     .filial-median-pill {
-      font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 900;
-      color: var(--fb-sky);
+      font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 900; color: var(--fb-sky);
     }
-    .filial-count-tag {
-      font-size: 12px; color: var(--muted); font-weight: 600;
-    }
+    .filial-count-tag { font-size: 12px; color: var(--muted); font-weight: 600; }
     .filial-bar-rail {
       height: 8px; background: var(--surface3); border-radius: 99px; overflow: hidden;
     }
@@ -162,13 +206,7 @@
     }
 
     /* Player Leaderboard */
-    .player-leaderboard-box {
-      background: var(--surface); border: 1.5px solid var(--border);
-      border-radius: 24px; padding: 28px; box-shadow: var(--shadow);
-    }
-    .player-table {
-      width: 100%; border-collapse: collapse;
-    }
+    .player-table { width: 100%; border-collapse: collapse; }
     .player-table th {
       text-align: left; font-size: 11px; font-weight: 800; color: var(--muted);
       text-transform: uppercase; letter-spacing: 0.6px; padding: 8px 12px;
@@ -178,9 +216,7 @@
       padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.06);
       font-size: 14px; vertical-align: middle;
     }
-    .player-name-cell {
-      display: flex; align-items: center; gap: 10px; font-weight: 700;
-    }
+    .player-name-cell { display: flex; align-items: center; gap: 10px; font-weight: 700; }
     .player-filial-tag {
       display: inline-block; font-size: 11px; font-weight: 700;
       background: var(--surface2); border: 1px solid var(--border);
@@ -207,37 +243,117 @@
     <header class="admin-topbar">
       <div class="admin-brand">
         <img src="content/forte-business-dark.svg" alt="Forte Business" class="admin-logo" />
-        <span class="admin-badge">TRAINER LIVE</span>
+        <span class="admin-badge">TRAINER LIVE ARENA</span>
       </div>
 
       <div style="display:flex;align-items:center;gap:16px;">
-        <div class="status-indicator lobby" id="session-status-badge">
+        <div class="status-indicator" id="session-status-badge">
           <span class="status-dot"></span>
           <span id="session-status-text">ОЖИДАНИЕ (ЛОББИ)</span>
         </div>
-        <div style="font-family:'Outfit',sans-serif;font-size:15px;color:var(--text2);">
-          Сессия: <strong id="session-id-display" style="color:var(--fb-sky);">...</strong>
-        </div>
-        <a href="/" target="_blank" class="btn btn-ghost" style="min-height:42px;padding:8px 16px;font-size:13px;">
-          🔗 Ссылка участника
-        </a>
+        <button class="btn btn-ghost" id="btn-toggle-filials" style="font-size:13px;min-height:42px;padding:8px 16px;">
+          🏢 Выбор филиалов (<span id="active-filials-count">18</span>)
+        </button>
+        <button class="btn btn-ghost" id="btn-reset" style="font-size:13px;min-height:42px;padding:8px 16px;">
+          🔄 Сброс сессии
+        </button>
+        <button class="btn btn-gold" id="btn-export" style="font-size:13px;min-height:42px;padding:8px 16px;">
+          📥 Скачать Excel (CSV)
+        </button>
       </div>
     </header>
 
-    <!-- Admin Controls Bar -->
-    <div class="admin-controls-bar">
-      <button class="btn btn-primary" id="btn-start" style="min-height:50px;">
-        🚀 Начать тестирование для всех
-      </button>
-      <button class="btn btn-ghost" id="btn-finish" style="min-height:50px;">
-        🏁 Завершить тест и показать итоги
-      </button>
-      <button class="btn btn-ghost" id="btn-reset" style="min-height:50px;">
-        🔄 Новая сессия / Сброс
-      </button>
-      <button class="btn btn-gold" id="btn-export" style="min-height:50px;margin-left:auto;">
-        📥 Скачать отчёт в Excel / CSV
-      </button>
+    <!-- Kahoot Projector Banner -->
+    <div class="projector-banner">
+      <div class="projector-left">
+        <div class="projector-label">
+          <span>📲</span> Подключение к тренингу Forte (Kahoot / Quizlet Live)
+        </div>
+        <div style="font-size:14px;color:var(--text2);margin-bottom:6px;">
+          Откройте на телефоне или компьютере и введите PIN-код:
+        </div>
+        <div class="projector-url">
+          <span class="url-chip" id="shareable-link-text">https://forte.piupiu.kz/</span>
+          <button class="btn btn-ghost" id="btn-copy-link" style="padding:6px 14px;font-size:12px;">
+            📋 Скопировать ссылку
+          </button>
+        </div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-size:12px;font-weight:800;color:var(--fb-sky);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">
+          PIN-КОД СЕССИИ
+        </div>
+        <div class="projector-pin" id="display-pin">------</div>
+      </div>
+    </div>
+
+    <!-- Filial Scope Selection Box (Collapsible) -->
+    <div class="scope-box" id="scope-box" style="display:none;margin-bottom:30px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="font-weight:800;font-size:15px;color:#fff;">
+          🏢 Филиалы, участвующие в этом тренинге:
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-ghost" id="btn-select-all-filials" style="padding:4px 12px;font-size:12px;">Выбрать все</button>
+          <button class="btn btn-ghost" id="btn-clear-filials" style="padding:4px 12px;font-size:12px;">Снять все</button>
+          <button class="btn btn-primary" id="btn-save-filials" style="padding:4px 14px;font-size:12px;">✓ Применить</button>
+        </div>
+      </div>
+      <div class="filials-chips-grid" id="filials-chips-grid"></div>
+    </div>
+
+    <!-- Synchronous Round Control Center -->
+    <div class="round-controller-box" id="round-box">
+      <div class="controller-grid">
+        <div>
+          <div style="font-size:12px;font-weight:800;color:var(--fb-sky);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
+            🎮 Синхронный запуск раунда (Кейс за кейсом)
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+            <select class="field-select" id="select-case" style="max-width:320px;font-size:15px;padding:10px 16px;">
+              <option value="1">Кейс 1: Госзакупки (Айгерим / бланковая)</option>
+              <option value="2">Кейс 2: Самрук-Казына (Бауржан / покрытая)</option>
+              <option value="3">Кейс 3: Малый бизнес (Ерлан / без оборотов)</option>
+              <option value="4">Кейс 4: Корпорация (Владимир Ильич / 600 млн)</option>
+              <option value="5">Кейс 5: Нерезидент РК (Alex / 20 млн)</option>
+              <option value="6">Кейс 6: Связанное лицо (Данияр / лимит 20 млн)</option>
+            </select>
+
+            <div style="display:flex;align-items:center;gap:6px;" id="timer-presets">
+              <span style="font-size:13px;color:var(--muted);font-weight:700;">⏱️ Время:</span>
+              <button class="btn btn-ghost timer-btn active" data-sec="90">90 сек</button>
+              <button class="btn btn-ghost timer-btn" data-sec="60">60 сек</button>
+              <button class="btn btn-ghost timer-btn" data-sec="120">120 сек</button>
+              <button class="btn btn-ghost timer-btn" data-sec="0">Без лимита</button>
+            </div>
+          </div>
+
+          <div style="font-size:14px;color:var(--text2);" id="round-subtitle">
+            Все подключённые сотрудники одновременно получат выбранный кейс и запустят таймер.
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:12px;">
+          <div class="timer-display-box" id="timer-display-box">
+            <div style="text-align:right;">
+              <div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;">Таймер раунда</div>
+              <div class="big-timer-val" id="big-timer-val">01:30</div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-primary" id="btn-start-round" style="min-height:54px;font-size:17px;padding:12px 28px;">
+              🚀 ПОЕХАЛИ! (Старт раунда)
+            </button>
+            <button class="btn btn-ghost" id="btn-stop-round" style="min-height:54px;font-size:15px;display:none;border-color:var(--red);color:var(--red);">
+              🛑 Завершить досрочно
+            </button>
+            <button class="btn btn-gold" id="btn-next-round" style="min-height:54px;font-size:16px;display:none;">
+              ▶ Следующий кейс →
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Big KPI Grid -->
@@ -261,9 +377,9 @@
       </div>
 
       <div class="kpi-card">
-        <div class="kpi-label">🏁 Завершили тестирование</div>
-        <div class="kpi-value" id="kpi-finished-players">0</div>
-        <div class="kpi-sub" id="kpi-finished-pct">0% от всех участников</div>
+        <div class="kpi-label">📝 Ответили в этом раунде</div>
+        <div class="kpi-value" id="kpi-round-subs">0 / 0</div>
+        <div class="kpi-sub" id="kpi-round-subs-pct">Ожидание ответов</div>
       </div>
     </div>
 
@@ -289,7 +405,7 @@
       <div class="player-leaderboard-box">
         <div class="section-header-row">
           <h2 style="font-size:22px;font-weight:900;display:flex;align-items:center;gap:10px;">
-            <span>⭐</span> Топ сотрудников
+            <span>⭐</span> Топ сотрудников банка
           </h2>
           <span style="font-size:12px;color:var(--muted);font-weight:700;">ТОП-10</span>
         </div>
@@ -327,13 +443,171 @@
 
   <script>
     const ADMIN_PWD = 'forte2026';
+    const ALL_FILIALS = [
+      'Алматы', 'Астана', 'Шымкент', 'Караганда', 'Актобе', 'Атырау',
+      'Актау', 'Павлодар', 'Усть-Каменогорск', 'Костанай', 'Уральск',
+      'Петропавловск', 'Кызылорда', 'Тараз', 'Семей', 'Туркестан',
+      'Талдыкорган', 'ЦБО / Головной офис'
+    ];
+
+    let currentSession = null;
+    let selectedDuration = 90;
+    let selectedFilialsSet = new Set(ALL_FILIALS);
     let pollInterval = null;
+
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+
+    async function init() {
+      setupFilialChips();
+      setupTimerPresets();
+      setupEventListeners();
+      await fetchStats();
+      pollInterval = setInterval(fetchStats, 1500);
+    }
+
+    function setupFilialChips() {
+      const container = document.getElementById('filials-chips-grid');
+      container.innerHTML = ALL_FILIALS.map(f => `
+        <div class="filial-chip-toggle active" data-filial="${esc(f)}">
+          ${esc(f)}
+        </div>
+      `).join('');
+
+      container.querySelectorAll('.filial-chip-toggle').forEach(el => {
+        el.addEventListener('click', () => {
+          const f = el.dataset.filial;
+          if (selectedFilialsSet.has(f)) {
+            selectedFilialsSet.delete(f);
+            el.classList.remove('active');
+          } else {
+            selectedFilialsSet.add(f);
+            el.classList.add('active');
+          }
+        });
+      });
+    }
+
+    function setupTimerPresets() {
+      document.querySelectorAll('#timer-presets .timer-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('#timer-presets .timer-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          selectedDuration = parseInt(btn.dataset.sec, 10);
+          updateTimerPreview();
+        });
+      });
+    }
+
+    function updateTimerPreview() {
+      const timerVal = document.getElementById('big-timer-val');
+      if (currentSession && currentSession.roundStatus === 'active') return;
+      if (selectedDuration === 0) {
+        timerVal.textContent = '∞';
+      } else {
+        const m = Math.floor(selectedDuration / 60);
+        const s = selectedDuration % 60;
+        timerVal.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      }
+    }
+
+    function setupEventListeners() {
+      document.getElementById('btn-copy-link').addEventListener('click', () => {
+        const link = document.getElementById('shareable-link-text').textContent;
+        navigator.clipboard.writeText(link).then(() => {
+          alert('Ссылка скопирована в буфер обмена!\n' + link);
+        });
+      });
+
+      document.getElementById('btn-toggle-filials').addEventListener('click', () => {
+        const box = document.getElementById('scope-box');
+        box.style.display = box.style.display === 'none' ? 'block' : 'none';
+      });
+
+      document.getElementById('btn-select-all-filials').addEventListener('click', () => {
+        selectedFilialsSet = new Set(ALL_FILIALS);
+        document.querySelectorAll('.filial-chip-toggle').forEach(el => el.classList.add('active'));
+      });
+
+      document.getElementById('btn-clear-filials').addEventListener('click', () => {
+        selectedFilialsSet = new Set();
+        document.querySelectorAll('.filial-chip-toggle').forEach(el => el.classList.remove('active'));
+      });
+
+      document.getElementById('btn-save-filials').addEventListener('click', async () => {
+        if (selectedFilialsSet.size === 0) {
+          alert('Выберите хотя бы один филиал!');
+          return;
+        }
+        await fetch('/api/admin/setup', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            password: ADMIN_PWD,
+            selectedFilials: Array.from(selectedFilialsSet)
+          })
+        });
+        document.getElementById('scope-box').style.display = 'none';
+        fetchStats();
+      });
+
+      // Start Round
+      document.getElementById('btn-start-round').addEventListener('click', async () => {
+        const caseId = document.getElementById('select-case').value;
+        const resp = await fetch('/api/admin/start_round', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            password: ADMIN_PWD,
+            caseId: caseId,
+            duration: selectedDuration
+          })
+        });
+        if (resp.ok) fetchStats();
+      });
+
+      // Stop Round Early
+      document.getElementById('btn-stop-round').addEventListener('click', async () => {
+        if (!confirm('Завершить раунд досрочно и подвести итоги?')) return;
+        await fetch('/api/admin/stop_round', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ password: ADMIN_PWD })
+        });
+        fetchStats();
+      });
+
+      // Next Round Button
+      document.getElementById('btn-next-round').addEventListener('click', () => {
+        const select = document.getElementById('select-case');
+        const nextVal = Math.min(6, (parseInt(select.value, 10) || 1) + 1);
+        select.value = nextVal;
+        document.getElementById('btn-start-round').click();
+      });
+
+      // Reset Session
+      document.getElementById('btn-reset').addEventListener('click', async () => {
+        if (!confirm('Создать новую сессию с новым PIN-кодом и сбросить результаты?')) return;
+        await fetch('/api/admin/reset', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ password: ADMIN_PWD, mode: 'synchronized' })
+        });
+        fetchStats();
+      });
+
+      // Export CSV
+      document.getElementById('btn-export').addEventListener('click', () => {
+        window.location.href = `/api/admin/export?pwd=${ADMIN_PWD}`;
+      });
+    }
 
     async function fetchStats() {
       try {
         const resp = await fetch('/api/stats?t=' + Date.now());
         if (!resp.ok) return;
         const data = await resp.json();
+        currentSession = data;
         renderDashboard(data);
       } catch (e) {
         console.error('Fetch error:', e);
@@ -341,32 +615,89 @@
     }
 
     function renderDashboard(data) {
-      // Status Badge
+      // PIN and Shareable link
+      document.getElementById('display-pin').textContent = data.pin || '------';
+      const origin = window.location.origin;
+      const shareLink = `${origin}/?pin=${data.pin || ''}`;
+      document.getElementById('shareable-link-text').textContent = shareLink;
+
+      // Active Filials Count
+      const filialsCount = data.selectedFilials ? data.selectedFilials.length : 18;
+      document.getElementById('active-filials-count').textContent = filialsCount;
+
+      // Round Controller State
+      const roundBox = document.getElementById('round-box');
+      const startBtn = document.getElementById('btn-start-round');
+      const stopBtn = document.getElementById('btn-stop-round');
+      const nextBtn = document.getElementById('btn-next-round');
+      const timerVal = document.getElementById('big-timer-val');
+      const subtitle = document.getElementById('round-subtitle');
+
       const statusBadge = document.getElementById('session-status-badge');
       const statusText  = document.getElementById('session-status-text');
-      const sessId      = document.getElementById('session-id-display');
 
-      sessId.textContent = data.sessionId || '—';
-      if (data.status === 'lobby') {
+      if (data.roundStatus === 'countdown') {
+        roundBox.className = 'round-controller-box active-round';
+        statusBadge.className = 'status-indicator lobby';
+        statusText.textContent = `⏳ СТАРТ ЧЕРЕЗ: ${data.countdownLeft || 3} СЕК`;
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'inline-flex';
+        nextBtn.style.display = 'none';
+        timerVal.textContent = `00:0${data.countdownLeft || 3}`;
+        timerVal.className = 'big-timer-val warning';
+        subtitle.textContent = `Приготовьтесь! Синхронный старт Кейса ${data.currentCaseId}...`;
+
+      } else if (data.roundStatus === 'active') {
+        roundBox.className = 'round-controller-box active-round';
+        statusBadge.className = 'status-indicator active';
+        statusText.textContent = `⚡ РАУНД: КЕЙС ${data.currentCaseId}`;
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'inline-flex';
+        nextBtn.style.display = 'none';
+
+        if (data.timeLeft != null) {
+          const m = Math.floor(data.timeLeft / 60);
+          const s = data.timeLeft % 60;
+          timerVal.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+          timerVal.className = data.timeLeft <= 15 ? 'big-timer-val danger' : data.timeLeft <= 30 ? 'big-timer-val warning' : 'big-timer-val';
+        } else {
+          timerVal.textContent = '∞';
+          timerVal.className = 'big-timer-val';
+        }
+        subtitle.textContent = `Идёт раунд по Кейсу ${data.currentCaseId}. Ответы принимаются в реальном времени.`;
+
+      } else if (data.roundStatus === 'review') {
+        roundBox.className = 'round-controller-box review-round';
+        statusBadge.className = 'status-indicator finished';
+        statusText.textContent = `🏁 ИТОГИ КЕЙСА ${data.currentCaseId}`;
+        startBtn.style.display = 'none';
+        stopBtn.style.display = 'none';
+        nextBtn.style.display = 'inline-flex';
+        timerVal.textContent = '00:00';
+        timerVal.className = 'big-timer-val';
+        subtitle.textContent = `Раунд по Кейсу ${data.currentCaseId} завершён! Ознакомьтесь с таблицей филиалов и переходите к следующему кейсу.`;
+
+      } else {
+        roundBox.className = 'round-controller-box';
         statusBadge.className = 'status-indicator lobby';
         statusText.textContent = '⏳ ОЖИДАНИЕ (ЛОББИ)';
-      } else if (data.status === 'active') {
-        statusBadge.className = 'status-indicator active';
-        statusText.textContent = '⚡ ИДЁТ ТЕСТИРОВАНИЕ';
-      } else {
-        statusBadge.className = 'status-indicator finished';
-        statusText.textContent = '🏁 ТЕСТ ЗАВЕРШЁН';
+        startBtn.style.display = 'inline-flex';
+        stopBtn.style.display = 'none';
+        nextBtn.style.display = 'none';
+        updateTimerPreview();
+        subtitle.textContent = 'Выберите кейс и время раунда, затем нажмите «ПОЕХАЛИ!».';
       }
 
-      // KPI
+      // KPIs
       document.getElementById('kpi-bank-median').innerHTML = `${data.bankMedianXP} <span style="font-size:20px;">XP</span>`;
       document.getElementById('kpi-bank-avg').textContent = `Среднее: ${data.bankAvgXP} XP`;
       document.getElementById('kpi-total-players').textContent = data.totalPlayers;
       document.getElementById('kpi-filials-count').textContent = `Филиалов: ${data.filials.length}`;
-      document.getElementById('kpi-finished-players').textContent = data.finishedPlayers;
 
-      const pct = data.totalPlayers > 0 ? Math.round((data.finishedPlayers / data.totalPlayers) * 100) : 0;
-      document.getElementById('kpi-finished-pct').textContent = `${pct}% от всех участников`;
+      const subsCount = data.roundSubmissions || 0;
+      document.getElementById('kpi-round-subs').textContent = `${subsCount} / ${data.totalPlayers}`;
+      const subPct = data.totalPlayers > 0 ? Math.round((subsCount / data.totalPlayers) * 100) : 0;
+      document.getElementById('kpi-round-subs-pct').textContent = `${subPct}% ответили в этом раунде`;
 
       // Top Filial
       const topFilial = data.filials[0];
@@ -452,47 +783,7 @@
       }
     }
 
-    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
-      ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
-
-    // Actions
-    document.getElementById('btn-start').addEventListener('click', async () => {
-      if (!confirm('Запустить тестирование для всех подключенных участников?')) return;
-      await fetch('/api/admin/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: ADMIN_PWD })
-      });
-      fetchStats();
-    });
-
-    document.getElementById('btn-finish').addEventListener('click', async () => {
-      if (!confirm('Завершить тестирование и подвести итоги битвы филиалов?')) return;
-      await fetch('/api/admin/finish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: ADMIN_PWD })
-      });
-      fetchStats();
-    });
-
-    document.getElementById('btn-reset').addEventListener('click', async () => {
-      if (!confirm('Сбросить текущую сессию и открыть чистое лобби для новой группы?')) return;
-      await fetch('/api/admin/reset', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: ADMIN_PWD })
-      });
-      fetchStats();
-    });
-
-    document.getElementById('btn-export').addEventListener('click', () => {
-      window.location.href = `/api/admin/export?pwd=${ADMIN_PWD}`;
-    });
-
-    // Start live polling every 2 seconds
-    fetchStats();
-    pollInterval = setInterval(fetchStats, 2000);
+    window.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
 </html>

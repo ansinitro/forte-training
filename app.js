@@ -359,6 +359,13 @@ function maxScore(c) {
   return c.stages.reduce((sum, s) => sum + Math.max(...s.options.map(o => o.score)), 0);
 }
 
+function formatTime(sec) {
+  if (sec == null || isNaN(sec) || sec < 0) return '00:00';
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 // ─────────────────────────────────────────────────────────────
 // CONFETTI
 // ─────────────────────────────────────────────────────────────
@@ -421,14 +428,16 @@ function go(fn, ...args) {
 // ─────────────────────────────────────────────────────────────
 // HUD
 // ─────────────────────────────────────────────────────────────
-function buildHUD() {
+function buildHUD(options = {}) {
   const rank = getRank(G.progress.xp);
   const hud  = document.createElement('header');
   hud.className = 'hud';
+  const isRound = !!(options && options.roundMode);
+
   hud.innerHTML = `
     <a class="hud-logo" id="hud-home" href="#" aria-label="Forte Business">
       <img src="content/forte-business-dark.svg" alt="Forte Business" class="forte-logo-img" />
-      <span class="hud-app-tag">QUEST</span>
+      <span class="hud-app-tag">${isRound ? 'LIVE' : 'QUEST'}</span>
     </a>
     <div class="hud-sep"></div>
     <div class="hud-av">${esc(G.player.avatar)}</div>
@@ -441,6 +450,12 @@ function buildHUD() {
       <span class="hud-pill-val" id="hud-xp">${G.progress.xp}</span>
     </div>
 
+    ${isRound ? `
+      <div class="hud-timer-pill" id="hud-timer-pill" title="Оставшееся время раунда">
+        <span>⏱️</span> <span id="hud-timer-val">--:--</span>
+      </div>
+    ` : ''}
+
     <button class="hud-btn" id="hud-battle" title="Посмотреть рейтинг филиалов">🏢 Битва филиалов</button>
     <button class="hud-btn" id="hud-sound" title="Включить / отключить звуковые эффекты">
       ${Sound.muted ? '🔇 Звук: ВЫКЛ' : '🔊 Звук: ВКЛ'}
@@ -448,11 +463,17 @@ function buildHUD() {
     <button class="hud-btn" id="hud-voice" title="Включить / отключить озвучку речи">
       ${Voice.enabled ? '🗣️ Голос: ВКЛ' : '🤐 Голос: ВЫКЛ'}
     </button>
-    <button class="hud-btn" id="hud-lb">🏆 Рейтинг</button>
+    ${!isRound ? `<button class="hud-btn" id="hud-lb">🏆 Рейтинг</button>` : ''}
   `;
 
-  hud.querySelector('#hud-home').addEventListener('click', e => { e.preventDefault(); Sound.playClick(); go(renderMap); });
-  hud.querySelector('#hud-lb').addEventListener('click', () => { Sound.playClick(); go(renderLeaderboard); });
+  hud.querySelector('#hud-home').addEventListener('click', e => {
+    e.preventDefault();
+    if (isRound) return; // In synchronized round, stay on task
+    Sound.playClick();
+    go(renderMap);
+  });
+  const lbBtn = hud.querySelector('#hud-lb');
+  if (lbBtn) lbBtn.addEventListener('click', () => { Sound.playClick(); go(renderLeaderboard); });
 
   const battleBtn = hud.querySelector('#hud-battle');
   if (battleBtn) battleBtn.addEventListener('click', showFilialBattleModal);
@@ -620,8 +641,22 @@ function startTypewriter(containerEl, fullText, { speed = 20, onComplete } = {})
 // ─────────────────────────────────────────────────────────────
 // SCREEN: LOGIN
 // ─────────────────────────────────────────────────────────────
-function renderLogin(root) {
+async function renderLogin(root) {
   let selectedAvatar = PLAYER_AVATARS[0];
+  const urlParams = new URLSearchParams(window.location.search);
+  const pinFromUrl = (urlParams.get('pin') || '').trim();
+
+  // Try fetching current session from server to get active PIN & participating filials
+  let sessionData = null;
+  try {
+    const sResp = await fetch('/api/session?t=' + Date.now());
+    if (sResp.ok) sessionData = await sResp.json();
+  } catch (e) {}
+
+  const activePin = pinFromUrl || (sessionData && sessionData.pin) || '';
+  const availableFilials = (sessionData && sessionData.selectedFilials && sessionData.selectedFilials.length > 0)
+    ? sessionData.selectedFilials
+    : FILIALS;
 
   root.innerHTML = `
     <div class="login-screen">
@@ -632,17 +667,28 @@ function renderLogin(root) {
         </div>
         <h1 class="login-title">Forte Business <span>Quest</span></h1>
         <p class="login-subtitle">
-          Официальный интерактивный тренажёр Forte Business по банковским гарантиям.<br>
-          Проведите реальные переговоры с предпринимателями, подбирайте подходящие продукты и повышайте свой ранг!
+          Синхронная обучающая платформа Forte Business по банковским гарантиям.<br>
+          Введите PIN сессии от тренера, укажите ваш филиал и включитесь в соревнование!
         </p>
 
-        <label class="field-label" for="pname">Ваше имя</label>
+        <div class="login-pin-box">
+          <label class="field-label" for="ppin" style="color:var(--fb-sky);margin-bottom:6px;">🔑 PIN-код сессии тренинга</label>
+          <input class="field-input login-pin-input" id="ppin" type="text"
+            placeholder="834192" maxlength="6" inputmode="numeric" value="${esc(activePin)}" />
+          <div style="font-size:12px;color:var(--muted);text-align:center;margin-top:6px;">
+            PIN отображается на главном проекторе у тренера
+          </div>
+        </div>
+
+        <div id="login-err" style="display:none;background:rgba(255,85,114,0.15);border:1px solid var(--red);color:#ff99aa;border-radius:12px;padding:10px 14px;font-size:13px;margin-bottom:14px;text-align:center;"></div>
+
+        <label class="field-label" for="pname">Ваше имя и фамилия</label>
         <input class="field-input" id="pname" type="text"
           placeholder="Например: Дамир Сейткали" maxlength="40" autocomplete="name" />
 
         <label class="field-label" for="pfilial">Ваш филиал (город)</label>
         <select class="field-select" id="pfilial">
-          ${FILIALS.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('')}
+          ${availableFilials.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('')}
         </select>
 
         <span class="avatar-label">Выберите персонажа</span>
@@ -661,13 +707,15 @@ function renderLogin(root) {
 
   const nameInput   = root.querySelector('#pname');
   const filialInput = root.querySelector('#pfilial');
+  const pinInput    = root.querySelector('#ppin');
   const startBtn    = root.querySelector('#start-btn');
+  const errBox      = root.querySelector('#login-err');
 
   const last = loadAllPlayers().slice(-1)[0];
   if (last) {
     nameInput.value = last.name;
     selectedAvatar = last.avatar || selectedAvatar;
-    if (last.filial) filialInput.value = last.filial;
+    if (last.filial && availableFilials.includes(last.filial)) filialInput.value = last.filial;
   }
 
   nameInput.addEventListener('input', () => { startBtn.disabled = nameInput.value.trim().length < 2; });
@@ -687,7 +735,10 @@ function renderLogin(root) {
   startBtn.addEventListener('click', async () => {
     const name = nameInput.value.trim();
     const filial = filialInput.value;
+    const pin = pinInput ? pinInput.value.trim() : '';
     if (name.length < 2) return;
+
+    errBox.style.display = 'none';
     Sound.playClick();
     startBtn.disabled = true;
     startBtn.textContent = '⏳ Подключение...';
@@ -701,15 +752,38 @@ function renderLogin(root) {
       const resp = await fetch('/api/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, avatar: G.player.avatar, filial })
+        body: JSON.stringify({ name, avatar: G.player.avatar, filial, pin })
       });
-      if (resp.ok) {
-        const data = await resp.json();
-        G.playerId = data.playerId;
-        if (data.status === 'lobby') {
-          go(renderLobbyWait);
+      const data = await resp.json();
+
+      if (!resp.ok) {
+        errBox.textContent = data.error || 'Ошибка подключения к сессии';
+        errBox.style.display = 'block';
+        startBtn.disabled = false;
+        startBtn.textContent = '▶ Подключиться к тренингу';
+        return;
+      }
+
+      G.playerId = data.playerId;
+      G.session = data;
+
+      if (data.mode === 'synchronized') {
+        if (data.roundStatus === 'active' && data.currentCaseId) {
+          const targetCase = (G.cases || []).find(c => c.id === data.currentCaseId) || G.cases[0];
+          go(renderConvo, targetCase, {
+            roundMode: true,
+            timeLeft: data.timeLeft,
+            duration: data.roundDuration
+          });
           return;
         }
+        go(renderLobbyWait);
+        return;
+      }
+
+      if (data.status === 'lobby') {
+        go(renderLobbyWait);
+        return;
       }
     } catch (e) {
       console.warn('Running in standalone mode:', e);
@@ -726,16 +800,27 @@ function renderLogin(root) {
 // ─────────────────────────────────────────────────────────────
 function renderLobbyWait(root) {
   let timer = null;
+  let countdownActive = false;
+
+  const pinText = G.session?.pin || '------';
+  const filialsCount = G.session?.selectedFilials?.length || 18;
+
   root.innerHTML = `
     <div class="lobby-screen">
       <div class="login-bg"></div>
+      <div id="countdown-mount"></div>
       <div class="lobby-card animate-in">
+        <div style="display:inline-flex;align-items:center;gap:8px;background:var(--fb-sky-dim);border:1.5px solid var(--fb-sky);padding:6px 16px;border-radius:99px;color:var(--fb-sky);font-weight:900;font-size:16px;letter-spacing:2px;margin-bottom:16px;">
+          <span>🔑 PIN:</span> <span>${esc(pinText)}</span>
+        </div>
+
         <div class="lobby-pulse-wrap">
           <span>📡</span>
         </div>
         <h1 class="lobby-title">Ожидаем команду тренера...</h1>
         <p class="lobby-sub">
-          Вы успешно подключились к тренингу Forte Business. Когда тренер нажмёт «Начать тестирование», игра стартует автоматически!
+          Вы подключены к общему тренингу Forte Business.<br>
+          Тренер запустит тестирование для всех участников одновременно с таймером!
         </p>
 
         <div class="lobby-player-pill">
@@ -746,12 +831,12 @@ function renderLobbyWait(root) {
 
         <div class="lobby-stats-box">
           <div class="lobby-stats-number" id="lobby-player-count">...</div>
-          <div class="lobby-stats-lbl">сотрудников сейчас в лобби</div>
+          <div class="lobby-stats-lbl">сотрудников в сессии (${filialsCount} филиалов)</div>
         </div>
 
         <div style="font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px;">
           <span class="status-dot"></span>
-          <span>Живая синхронизация с сервером активна</span>
+          <span>Ожидание запуска раунда «ПОЕХАЛИ!»</span>
         </div>
       </div>
     </div>
@@ -759,22 +844,58 @@ function renderLobbyWait(root) {
 
   async function checkLobby() {
     try {
-      const resp = await fetch('/api/stats?t=' + Date.now());
+      const resp = await fetch('/api/session?t=' + Date.now());
       if (!resp.ok) return;
       const data = await resp.json();
+      G.session = data;
+
       const countEl = root.querySelector('#lobby-player-count');
       if (countEl) countEl.textContent = data.totalPlayers;
 
-      if (data.status === 'active') {
+      // Handle 3.. 2.. 1.. Countdown
+      if (data.roundStatus === 'countdown') {
+        const mount = root.querySelector('#countdown-mount');
+        if (mount && !countdownActive) {
+          countdownActive = true;
+          Sound.playClick();
+          mount.innerHTML = `
+            <div class="countdown-overlay">
+              <div class="countdown-big-num" id="countdown-num">${data.countdownLeft || 3}</div>
+              <div class="countdown-case-title">Кейс ${data.currentCaseId || 1}: ПОЕХАЛИ!</div>
+              <div class="countdown-sub">Раунд сейчас начнётся...</div>
+            </div>
+          `;
+        } else if (mount && countdownActive) {
+          const numEl = mount.querySelector('#countdown-num');
+          if (numEl) numEl.textContent = data.countdownLeft || '1';
+        }
+      }
+
+      // Handle Active Round Launch!
+      if (data.roundStatus === 'active' && data.currentCaseId) {
+        clearInterval(timer);
+        Sound.playVictory();
+        const targetCase = (G.cases || []).find(c => c.id === data.currentCaseId) || G.cases[0];
+        go(renderConvo, targetCase, {
+          roundMode: true,
+          timeLeft: data.timeLeft,
+          duration: data.roundDuration
+        });
+        return;
+      }
+
+      // Freeroam fallback
+      if (data.mode === 'freeroam' && data.status === 'active') {
         clearInterval(timer);
         Sound.playVictory();
         go(renderMap);
+        return;
       }
     } catch (e) {}
   }
 
   checkLobby();
-  timer = setInterval(checkLobby, 1500);
+  timer = setInterval(checkLobby, 1000);
 }
 
 
@@ -868,8 +989,9 @@ function renderMap(root) {
 // ─────────────────────────────────────────────────────────────
 // SCREEN: VISUAL NOVEL CONVERSATION GAME
 // ─────────────────────────────────────────────────────────────
-function renderConvo(root, caseData) {
-  const hud = buildHUD();
+function renderConvo(root, caseData, roundOptions = {}) {
+  const isRound = !!(roundOptions && roundOptions.roundMode);
+  const hud = buildHUD({ roundMode: isRound, caseId: caseData.id });
   root.appendChild(hud);
 
   const main = document.createElement('main');
@@ -893,6 +1015,75 @@ function renderConvo(root, caseData) {
 
   // Message history for dialogue stream
   let chatHistory = [];
+
+  // Synchronized Round Timer
+  let timeLeft = roundOptions.timeLeft != null ? roundOptions.timeLeft : (roundOptions.duration || 90);
+  let timerId = null;
+
+  function updateTimerUI() {
+    const timerValEl = hud.querySelector('#hud-timer-val');
+    const timerPillEl = hud.querySelector('#hud-timer-pill');
+    if (!timerValEl || !timerPillEl) return;
+    timerValEl.textContent = formatTime(timeLeft);
+    if (timeLeft <= 15) {
+      timerPillEl.className = 'hud-timer-pill danger';
+    } else if (timeLeft <= 30) {
+      timerPillEl.className = 'hud-timer-pill warning';
+    } else {
+      timerPillEl.className = 'hud-timer-pill';
+    }
+  }
+
+  function handleRoundTimeout() {
+    if (timerId) clearInterval(timerId);
+    window.removeEventListener('keydown', handleKeyDown);
+    Voice.stop();
+    Sound.playMistake();
+    const pct = maxPossible > 0 ? Math.round((score / maxPossible) * 100) : 0;
+    const finalPct = Math.max(0, Math.min(100, pct));
+    if (G.playerId) {
+      fetch('/api/round/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerId: G.playerId,
+          caseId: caseData.id,
+          score: finalPct,
+          passed: finalPct >= 70,
+          answers: reviews
+        })
+      }).catch(() => {});
+    }
+    go(renderRoundReview, caseData, finalPct, reviews, true, true);
+  }
+
+  if (isRound) {
+    updateTimerUI();
+    let pollCount = 0;
+    timerId = setInterval(async () => {
+      timeLeft = Math.max(0, timeLeft - 1);
+      updateTimerUI();
+
+      pollCount++;
+      if (pollCount % 2 === 0) {
+        try {
+          const resp = await fetch('/api/session?t=' + Date.now());
+          if (resp.ok) {
+            const sData = await resp.json();
+            if (sData.timeLeft != null) timeLeft = sData.timeLeft;
+            if (sData.roundStatus === 'review' || sData.roundStatus === 'finished') {
+              handleRoundTimeout();
+              return;
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (timeLeft <= 0) {
+        handleRoundTimeout();
+      }
+    }, 1000);
+  }
 
   function currentStage() {
     return caseData.stages[stageIdx];
@@ -949,13 +1140,16 @@ function renderConvo(root, caseData) {
     const nav = document.createElement('div');
     nav.className = 'convo-nav';
     nav.innerHTML = `
-      <button class="back-btn" id="convo-back-btn">← Все кейсы</button>
+      <button class="back-btn" id="convo-back-btn">${isRound ? '← В лобби' : '← Все кейсы'}</button>
       <span class="convo-case-title">💼 Forte Business · ${esc(caseData.title)}</span>
     `;
     nav.querySelector('#convo-back-btn').addEventListener('click', () => {
+      if (timerId) clearInterval(timerId);
       window.removeEventListener('keydown', handleKeyDown);
+      Voice.stop();
       Sound.playClick();
-      go(renderMap);
+      if (isRound) go(renderLobbyWait);
+      else go(renderMap);
     });
     main.appendChild(nav);
 
@@ -1075,10 +1269,30 @@ function renderConvo(root, caseData) {
       finishBtn.style.cssText = 'min-height:60px;font-size:18px;margin-top:14px;';
       finishBtn.textContent = '🎯 Посмотреть результат';
       finishBtn.addEventListener('click', () => {
+        if (timerId) clearInterval(timerId);
         window.removeEventListener('keydown', handleKeyDown);
         Sound.playVictory();
         const pct = maxPossible > 0 ? Math.round((score / maxPossible) * 100) : 0;
-        go(renderResult, caseData, Math.max(0, Math.min(100, pct)), reviews);
+        const finalPct = Math.max(0, Math.min(100, pct));
+
+        if (isRound) {
+          if (G.playerId) {
+            fetch('/api/round/submit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                playerId: G.playerId,
+                caseId: caseData.id,
+                score: finalPct,
+                passed: finalPct >= 70,
+                answers: reviews
+              })
+            }).catch(() => {});
+          }
+          go(renderRoundReview, caseData, finalPct, reviews, true, false);
+        } else {
+          go(renderResult, caseData, finalPct, reviews);
+        }
       });
       dialogueDeck.appendChild(finishBtn);
       layout.appendChild(dialogueDeck);
@@ -1349,6 +1563,217 @@ function renderConvo(root, caseData) {
   }
 
   renderScene();
+}
+
+// ─────────────────────────────────────────────────────────────
+// SCREEN: ROUND REVIEW (SYNCHRONIZED LIVE CASE RESULT)
+// ─────────────────────────────────────────────────────────────
+function renderRoundReview(root, caseData, scorePct, reviews, isRoundMode = true, timedOut = false) {
+  const prev     = G.progress.done[caseData.id] || { xp: 0, best: 0 };
+  const xpEarned = Math.round(scorePct);
+  const gain     = Math.max(0, xpEarned - (prev.xp || 0));
+
+  G.progress.xp += gain;
+  G.progress.done[caseData.id] = {
+    xp:   Math.max(xpEarned, prev.xp || 0),
+    best: Math.max(scorePct, prev.best || 0),
+    pass: prev.pass || scorePct >= 70,
+  };
+  savePlayer();
+  refreshHUDxp();
+
+  if (scorePct >= 70) triggerConfetti(3500);
+
+  const hud = buildHUD({ roundMode: true, caseId: caseData.id });
+  root.appendChild(hud);
+
+  const main = document.createElement('main');
+  main.className = 'result-screen animate-in';
+
+  const circCls = scorePct >= 70 ? 'great' : scorePct >= 40 ? 'ok' : 'poor';
+
+  main.innerHTML = `
+    <div id="countdown-mount"></div>
+
+    <div class="result-hero" style="margin-top:20px;">
+      <div class="result-circle ${circCls}">${Math.round(scorePct)}%</div>
+      <div class="result-title">${
+        timedOut
+          ? '⏰ Время раунда истекло!'
+          : scorePct >= 70
+          ? '🎉 Отличный результат раунда!'
+          : scorePct >= 40
+          ? '💪 Раунд завершён!'
+          : '📚 Раунд завершён'
+      }</div>
+      <p class="result-note">${
+        timedOut
+          ? 'Таймер завершил раунд для всех филиалов одновременно. Все ваши ответы зафиксированы и переданы в рейтинг филиала!'
+          : scorePct >= 70
+          ? 'Превосходное решение! Вы внесли максимальный вклад в победу своего филиала.'
+          : 'Ответы зафиксированы. Посмотрите разбор правильного продукта и рекомендации наставника.'
+      }</p>
+      <div class="xp-badge">✨ +${gain} XP к рейтингу филиала</div>
+    </div>
+
+    <!-- Kahoot-style Waiting Box for Next Round -->
+    <div class="round-wait-card">
+      <div class="round-wait-icon">⏳</div>
+      <div class="round-wait-title">Ожидаем следующий кейс от тренера...</div>
+      <div class="round-wait-sub">
+        Тренер разбирает статистику ответов по филиалам на главном экране.<br>
+        Как только тренер нажмёт <strong>«ПОЕХАЛИ!»</strong> для следующего кейса, он откроется автоматически!
+      </div>
+      <div class="round-wait-live-tag">
+        <span class="status-dot"></span>
+        <span>Живая синхронизация с проектором тренера активна</span>
+      </div>
+    </div>
+
+    <!-- Filial Rating & Real-time Live Engagement Card -->
+    <div class="filial-comp-box" id="result-filial-comp">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div style="font-weight:800;font-size:16px;color:#fff;display:flex;align-items:center;gap:8px;">
+          <span>🏢</span>
+          <span>Вклад в битву филиалов: <strong style="color:var(--fb-sky);">${esc(G.player.filial || 'Алматы')}</strong></span>
+        </div>
+        <button class="btn btn-ghost" id="open-filials-btn" style="padding:6px 14px;font-size:13px;">
+          📊 Турнирная таблица филиалов
+        </button>
+      </div>
+      <div class="filial-comp-row">
+        <span style="color:var(--text2);font-size:14px;">Ваш результат за этот кейс:</span>
+        <strong style="color:var(--fb-sky);font-size:15px;">${Math.round(scorePct)}% (${gain > 0 ? '+' + gain : 0} XP)</strong>
+      </div>
+      <div class="filial-comp-row">
+        <span style="color:var(--text2);font-size:14px;">Медиана вашего филиала:</span>
+        <strong id="filial-median-stat" style="color:#fff;font-size:15px;">Считаем...</strong>
+      </div>
+      <div class="filial-comp-row">
+        <span style="color:var(--text2);font-size:14px;">Медиана по всему банку:</span>
+        <strong id="bank-median-stat" style="color:var(--fb-sky);font-size:15px;">Считаем...</strong>
+      </div>
+      <div class="filial-comp-row">
+        <span style="color:var(--text2);font-size:14px;">Текущая позиция филиала:</span>
+        <strong id="filial-rank-stat" style="color:var(--gold);font-size:15px;">Считаем...</strong>
+      </div>
+    </div>
+
+    <!-- Correct product reveal -->
+    <div class="correct-product-box">
+      <div class="correct-product-icon">✅</div>
+      <div>
+        <div class="correct-product-label">Эталонное решение по гарантии (Кейс ${caseData.id})</div>
+        <div class="correct-product-name">${esc(caseData.correct_product)}</div>
+        <div class="correct-product-detail">
+          <strong>Комиссия:</strong> ${esc(caseData.commission)}<br>
+          <strong>Канал оформления:</strong> ${esc(caseData.channel)}<br>
+          <strong>Лимиты:</strong> ${esc(caseData.limits)}<br>
+          <strong>Документы:</strong> ${esc(caseData.documents)}
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">📋 Детальный разбор ваших ответов</h2>
+    <div class="review-section" id="review-area"></div>
+  `;
+  root.appendChild(main);
+
+  const openFilialsBtn = main.querySelector('#open-filials-btn');
+  if (openFilialsBtn) {
+    openFilialsBtn.addEventListener('click', () => showFilialBattleModal());
+  }
+
+  // Populate review items
+  const revArea = main.querySelector('#review-area');
+  reviews.forEach(r => {
+    const item = document.createElement('div');
+    item.className = `review-item ${r.isCorrect ? 'ok' : 'miss'}`;
+    item.innerHTML = `
+      <div class="review-stage">Этап ${r.stageNum}: ${esc(r.stageName)}</div>
+      <div class="review-result-tag ${r.isCorrect ? 'ok' : 'miss'}">${r.isCorrect ? '✓ Верно' : '✗ Ошибка'} · ${r.score > 0 ? '+' : ''}${r.score} баллов</div>
+      <div class="review-choice">«${esc(r.choiceText)}»</div>
+      <div class="review-why">${esc(r.explanation)}</div>
+    `;
+    revArea.appendChild(item);
+  });
+
+  // Fetch filial battle stats
+  fetch('/api/stats?t=' + Date.now())
+    .then(r => r.json())
+    .then(data => {
+      const myFilial = G.player.filial || 'Алматы';
+      const fStat = (data.filials || []).find(f => f.name === myFilial || f.filial === myFilial);
+      const fRank = (data.filials || []).findIndex(f => f.name === myFilial || f.filial === myFilial) + 1;
+
+      const fMedEl = main.querySelector('#filial-median-stat');
+      const bMedEl = main.querySelector('#bank-median-stat');
+      const fRankEl = main.querySelector('#filial-rank-stat');
+
+      if (fMedEl) fMedEl.textContent = fStat ? `${fStat.medianXP || fStat.median_xp} XP (участников: ${fStat.count})` : `${G.progress.xp} XP`;
+      if (bMedEl) bMedEl.textContent = `${data.bankMedianXP || data.bank_median_xp || 0} XP`;
+      if (fRankEl) {
+        if (fRank > 0) {
+          const medal = fRank === 1 ? '🥇' : fRank === 2 ? '🥈' : fRank === 3 ? '🥉' : '📍';
+          fRankEl.innerHTML = `${medal} ${fRank}-е место из ${data.filials.length}`;
+        } else {
+          fRankEl.textContent = '1-е место';
+        }
+      }
+    })
+    .catch(() => {});
+
+  // Poll for next case launch from trainer!
+  let pollInterval = null;
+  let countdownActive = false;
+
+  async function checkNextRound() {
+    try {
+      const resp = await fetch('/api/session?t=' + Date.now());
+      if (!resp.ok) return;
+      const data = await resp.json();
+
+      if (data.status === 'finished') {
+        clearInterval(pollInterval);
+        Sound.playVictory();
+        go(renderCertificate);
+        return;
+      }
+
+      // Check for countdown for NEXT case
+      if (data.roundStatus === 'countdown' && data.currentCaseId && data.currentCaseId !== caseData.id) {
+        const mount = root.querySelector('#countdown-mount');
+        if (mount && !countdownActive) {
+          countdownActive = true;
+          Sound.playClick();
+          mount.innerHTML = `
+            <div class="countdown-overlay">
+              <div class="countdown-big-num" id="round-cd-num">${data.countdownLeft || 3}</div>
+              <div class="countdown-case-title">Кейс ${data.currentCaseId}: ПОЕХАЛИ!</div>
+              <div class="countdown-sub">Следующий раунд начинается прямо сейчас...</div>
+            </div>
+          `;
+        } else if (mount && countdownActive) {
+          const numEl = mount.querySelector('#round-cd-num');
+          if (numEl) numEl.textContent = data.countdownLeft || '1';
+        }
+      }
+
+      // Check if new round started!
+      if (data.roundStatus === 'active' && data.currentCaseId && data.currentCaseId !== caseData.id) {
+        clearInterval(pollInterval);
+        Sound.playVictory();
+        const nextCase = (G.cases || []).find(c => c.id === data.currentCaseId) || G.cases[0];
+        go(renderConvo, nextCase, {
+          roundMode: true,
+          timeLeft: data.timeLeft,
+          duration: data.roundDuration
+        });
+      }
+    } catch (e) {}
+  }
+
+  pollInterval = setInterval(checkNextRound, 1000);
 }
 
 // ─────────────────────────────────────────────────────────────
