@@ -1,0 +1,9 @@
+.git
+.gitignore
+.agents
+.gemini
+material-for-training
+docker-compose.yml
+Dockerfile
+.dockerignore
+README.md

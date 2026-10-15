@@ -1,0 +1,55 @@
+# ===========================================
+# Forte Quest Production Stack (Direct Traefik)
+# ===========================================
+# Static Nginx server connects directly to Traefik on platform-net.
+# No extra Node.js runtime required - served via ultra-fast Nginx Alpine.
+#
+# Prerequisites (already created on host):
+#   docker network create platform-net
+#
+# Start:
+#   docker compose up -d --build
+#
+# ===========================================
+
+name: forte-frontend
+
+x-logging: &logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: forte-frontend-app
+    restart: unless-stopped
+    networks:
+      - platform-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.forte-frontend.rule=Host(`forte.piupiu.kz`)"
+      - "traefik.http.routers.forte-frontend.service=forte-frontend"
+      - "traefik.http.services.forte-frontend.loadbalancer.server.port=80"
+      - "traefik.docker.network=platform-net"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:80 >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    logging: *logging
+
+# ===========================================
+# Traefik External Network
+# ===========================================
+networks:
+  platform-net:
+    external: true
