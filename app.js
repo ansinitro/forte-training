@@ -171,6 +171,107 @@ const Sound = {
 Sound.init();
 
 // ─────────────────────────────────────────────────────────────
+// VOICE ENGINE (Web Speech API Native Russian Speech Synthesis)
+// ─────────────────────────────────────────────────────────────
+const Voice = {
+  enabled: true,
+  currentUtterance: null,
+  voices: [],
+
+  init() {
+    this.enabled = localStorage.getItem('fq_voice') !== 'muted';
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      const load = () => {
+        try {
+          this.voices = window.speechSynthesis.getVoices() || [];
+        } catch (e) {}
+      };
+      load();
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = load;
+      }
+    }
+  },
+
+  toggle() {
+    this.enabled = !this.enabled;
+    localStorage.setItem('fq_voice', this.enabled ? 'active' : 'muted');
+    if (!this.enabled) this.stop();
+    return this.enabled;
+  },
+
+  stop() {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (e) {}
+    }
+    this.currentUtterance = null;
+  },
+
+  speak(text, caseId, onStart, onEnd) {
+    if (!this.enabled || typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      if (onStart) onStart();
+      return false;
+    }
+
+    this.stop();
+
+    try {
+      const cleanText = String(text || '').replace(/[«»"']/g, '').trim();
+      const u = new SpeechSynthesisUtterance(cleanText);
+      u.lang = 'ru-RU';
+
+      if (!this.voices || this.voices.length === 0) {
+        this.voices = window.speechSynthesis.getVoices() || [];
+      }
+      const ruVoices = this.voices.filter(v => v.lang && v.lang.toLowerCase().replace('_', '-').startsWith('ru'));
+
+      // Character-specific voice tuning matching client themes
+      const configs = {
+        1: { gender: 'female', pitch: 1.15, rate: 1.02 }, // Айгерим (бизнес-директор, госзакупки)
+        2: { gender: 'male',   pitch: 0.82, rate: 0.95 }, // Бауржан (инженер строитель)
+        3: { gender: 'male',   pitch: 1.08, rate: 1.08 }, // Ерлан (молодой предприниматель)
+        4: { gender: 'male',   pitch: 0.72, rate: 0.90 }, // Владимир Ильич (финдиректор корпорации)
+        5: { gender: 'male',   pitch: 1.00, rate: 1.00 }, // Alex (нерезидент)
+        6: { gender: 'male',   pitch: 0.88, rate: 0.98 }, // Данияр (VIP-партнёр Forte)
+      };
+      const cfg = configs[Number(caseId)] || { pitch: 1.0, rate: 1.0 };
+      u.pitch = cfg.pitch;
+      u.rate = cfg.rate;
+
+      if (ruVoices.length > 0) {
+        if (cfg.gender === 'female') {
+          const fem = ruVoices.find(v => /female|irina|milena|tatyana|victoria|daria|google русский/i.test(v.name));
+          u.voice = fem || ruVoices[0];
+        } else {
+          const male = ruVoices.find(v => /male|pavel|yuri|dmitri|alexander/i.test(v.name));
+          u.voice = male || ruVoices[0];
+        }
+      }
+
+      u.onstart = () => {
+        if (onStart) onStart();
+      };
+      u.onend = () => {
+        if (onEnd) onEnd();
+      };
+      u.onerror = () => {
+        if (onEnd) onEnd();
+      };
+
+      this.currentUtterance = u;
+      window.speechSynthesis.speak(u);
+      return true;
+    } catch (e) {
+      if (onStart) onStart();
+      return false;
+    }
+  }
+};
+Voice.init();
+
+// ─────────────────────────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────────────────────────
 let G = {
@@ -259,6 +360,7 @@ function triggerConfetti(duration = 3500) {
 // SMOOTH SCREEN TRANSITION
 // ─────────────────────────────────────────────────────────────
 function go(fn, ...args) {
+  if (typeof Voice !== 'undefined') Voice.stop();
   const root = document.getElementById('root');
   root.style.opacity = '0';
   root.style.transform = 'translateY(8px)';
@@ -296,8 +398,11 @@ function buildHUD() {
     </div>
 
     <button class="hud-btn" id="hud-battle" title="Посмотреть рейтинг филиалов">🏢 Битва филиалов</button>
-    <button class="hud-btn" id="hud-sound" title="Включить / отключить звук">
+    <button class="hud-btn" id="hud-sound" title="Включить / отключить звуковые эффекты">
       ${Sound.muted ? '🔇 Звук: ВЫКЛ' : '🔊 Звук: ВКЛ'}
+    </button>
+    <button class="hud-btn" id="hud-voice" title="Включить / отключить озвучку речи">
+      ${Voice.enabled ? '🗣️ Голос: ВКЛ' : '🤐 Голос: ВЫКЛ'}
     </button>
     <button class="hud-btn" id="hud-lb">🏆 Рейтинг</button>
   `;
@@ -314,6 +419,15 @@ function buildHUD() {
     soundBtn.textContent = active ? '🔊 Звук: ВКЛ' : '🔇 Звук: ВЫКЛ';
     if (active) Sound.playClick();
   });
+
+  const voiceBtn = hud.querySelector('#hud-voice');
+  if (voiceBtn) {
+    voiceBtn.addEventListener('click', () => {
+      const active = Voice.toggle();
+      voiceBtn.textContent = active ? '🗣️ Голос: ВКЛ' : '🤐 Голос: ВЫКЛ';
+      Sound.playClick();
+    });
+  }
 
   return hud;
 }
@@ -672,7 +786,9 @@ function renderMap(root) {
 
     card.innerHTML = `
       <div class="case-top">
-        <div class="case-icon">${profile.avatar}</div>
+        <div class="case-card-avatar" style="width:58px;height:58px;border-radius:14px;background:radial-gradient(circle,#18335c,#072146);border:1.5px solid var(--fb-sky);display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 14px rgba(0,0,0,0.4);">
+          ${typeof getPixelAvatarSvg === 'function' ? getPixelAvatarSvg(c.id) : `<span style="font-size:28px;">${profile.avatar}</span>`}
+        </div>
         <div class="case-badges">
           ${isPassed ? '<span class="badge badge-done">✓ Пройдено</span>' : ''}
           <span class="badge badge-kind">Диалог</span>
@@ -746,6 +862,7 @@ function renderConvo(root, caseData) {
     if (e.code === 'Space') {
       if (currentTypewriter && !currentTypewriter.isDone()) {
         e.preventDefault();
+        Voice.stop();
         currentTypewriter.skip();
         return;
       }
@@ -828,7 +945,9 @@ function renderConvo(root, caseData) {
     clientStage.innerHTML = `
       <div class="client-portrait-wrap">
         <div class="client-avatar-frame" id="client-avatar-frame">
-          <div class="client-avatar-emoji">${profile.avatar}</div>
+          <div class="pixel-avatar-container" id="pixel-avatar-container">
+            ${typeof getPixelAvatarSvg === 'function' ? getPixelAvatarSvg(caseData.id) : `<div style="font-size:56px;">${profile.avatar}</div>`}
+          </div>
           <div class="speaking-eq">
             <div class="eq-bar"></div>
             <div class="eq-bar"></div>
@@ -927,7 +1046,10 @@ function renderConvo(root, caseData) {
     vnFrame.innerHTML = `
       <div class="vn-dialogue-top">
         <span class="vn-speaker-badge">💬 ${esc(caseData.client)}</span>
-        <button class="vn-skip-btn" id="vn-skip-btn">⏩ Пропустить (Space)</button>
+        <div class="vn-dialogue-actions">
+          <button class="vn-voice-btn" id="vn-voice-replay-btn" title="Озвучить речь клиента">🔊 Послушать</button>
+          <button class="vn-skip-btn" id="vn-skip-btn">⏩ Пропустить (Space)</button>
+        </div>
       </div>
       <div class="vn-dialogue-text" id="typewriter-box"></div>
     `;
@@ -971,11 +1093,12 @@ function renderConvo(root, caseData) {
       chatStream.scrollTop = chatStream.scrollHeight;
     }, 50);
 
-    // Trigger Typewriter for client's line
+    // Trigger Typewriter and Voice Speech for client's line
     const textTarget = main.querySelector('#typewriter-box');
     const avatarFrame = main.querySelector('#client-avatar-frame');
     const statusBadge = main.querySelector('#client-status-badge');
     const skipBtn = main.querySelector('#vn-skip-btn');
+    const voiceReplayBtn = main.querySelector('#vn-voice-replay-btn');
 
     if (avatarFrame) avatarFrame.className = 'client-avatar-frame speaking';
     if (statusBadge) {
@@ -1004,12 +1127,60 @@ function renderConvo(root, caseData) {
       onComplete: onTypewriterDone
     });
 
-    // Clicking dialogue or skip button immediately completes text
-    if (skipBtn) skipBtn.addEventListener('click', () => currentTypewriter.skip());
-    if (textTarget) textTarget.addEventListener('click', () => currentTypewriter.skip());
+    // Voice Speech Synthesis
+    Voice.speak(
+      stage.client_line,
+      caseData.id,
+      () => {
+        if (avatarFrame) avatarFrame.className = 'client-avatar-frame speaking';
+      },
+      () => {
+        // When speech finishes
+        if (currentTypewriter && currentTypewriter.isDone()) {
+          if (avatarFrame) avatarFrame.className = 'client-avatar-frame';
+          if (statusBadge) {
+            statusBadge.className = 'client-status-badge';
+            statusBadge.textContent = '👂 Слушает вас';
+          }
+        }
+      }
+    );
+
+    // Voice Replay Button
+    if (voiceReplayBtn) {
+      voiceReplayBtn.addEventListener('click', () => {
+        Sound.playClick();
+        if (avatarFrame) avatarFrame.className = 'client-avatar-frame speaking';
+        if (statusBadge) {
+          statusBadge.className = 'client-status-badge speaking';
+          statusBadge.textContent = '💬 Говорит...';
+        }
+        Voice.speak(
+          stage.client_line,
+          caseData.id,
+          null,
+          () => {
+            if (avatarFrame) avatarFrame.className = 'client-avatar-frame';
+            if (statusBadge) {
+              statusBadge.className = 'client-status-badge';
+              statusBadge.textContent = '👂 Слушает вас';
+            }
+          }
+        );
+      });
+    }
+
+    // Skip handler: immediately stops speech and shows text
+    function handleSkip() {
+      Voice.stop();
+      if (currentTypewriter) currentTypewriter.skip();
+    }
+    if (skipBtn) skipBtn.addEventListener('click', handleSkip);
+    if (textTarget) textTarget.addEventListener('click', handleSkip);
 
     // ── Choice Handler ──
     function makeChoice(opt) {
+      Voice.stop();
       chosen = opt;
       score += opt.score;
       const deltaTrust = opt.score * 0.6;
