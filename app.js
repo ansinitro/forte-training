@@ -258,8 +258,9 @@ function buildHUD() {
   const hud  = document.createElement('header');
   hud.className = 'hud';
   hud.innerHTML = `
-    <a class="hud-logo" id="hud-home" href="#">
-      <span>🏦</span> Forte Quest
+    <a class="hud-logo" id="hud-home" href="#" aria-label="Forte Business">
+      <img src="content/forte-business-dark.svg" alt="Forte Business" class="forte-logo-img" />
+      <span class="hud-app-tag">QUEST</span>
     </a>
     <div class="hud-sep"></div>
     <div class="hud-av">${esc(G.player.avatar)}</div>
@@ -360,11 +361,13 @@ function renderLogin(root) {
     <div class="login-screen">
       <div class="login-bg"></div>
       <div class="login-card animate-in">
-        <div class="login-emblem">🏦</div>
-        <h1 class="login-title">Forte Quest</h1>
+        <div class="login-brand-header">
+          <img src="content/forte-business-dark.svg" alt="Forte Business" class="login-logo-img" />
+        </div>
+        <h1 class="login-title">Forte Business <span>Quest</span></h1>
         <p class="login-subtitle">
-          Интерактивный RPG-тренажёр переговоров по банковским гарантиям.<br>
-          Проведите реальные переговоры с клиентами, выбирайте правильные решения и повышайте свой ранг!
+          Официальный интерактивный тренажёр Forte Business по банковским гарантиям.<br>
+          Проведите реальные переговоры с предпринимателями, подбирайте подходящие продукты и повышайте свой ранг!
         </p>
 
         <label class="field-label" for="pname">Ваше имя</label>
@@ -434,7 +437,7 @@ function renderMap(root) {
 
   main.innerHTML = `
     <div class="map-hero">
-      <div class="map-hero-badge">💼 Симулятор переговоров · ForteBank</div>
+      <div class="map-hero-badge">💼 Forte Business · Симулятор переговоров по гарантиям</div>
       <h1 class="map-title">Выберите клиентский кейс</h1>
       <p class="map-sub">
         Пройдено: <strong>${completedCount}</strong> из <strong>${totalCases}</strong> кейсов.
@@ -587,7 +590,7 @@ function renderConvo(root, caseData) {
     nav.className = 'convo-nav';
     nav.innerHTML = `
       <button class="back-btn" id="convo-back-btn">← Все кейсы</button>
-      <span class="convo-case-title">💼 ${esc(caseData.title)}</span>
+      <span class="convo-case-title">💼 Forte Business · ${esc(caseData.title)}</span>
     `;
     nav.querySelector('#convo-back-btn').addEventListener('click', () => {
       window.removeEventListener('keydown', handleKeyDown);
@@ -1119,12 +1122,12 @@ function renderCertificate(root) {
   main.innerHTML = `
     <div class="convo-nav"><button class="back-btn" id="back-btn">← Назад</button></div>
     <div class="cert-card" id="cert-area">
-      <div class="cert-corner tl">🏦</div>
-      <div class="cert-corner tr">🏦</div>
-      <div class="cert-corner bl">🏦</div>
-      <div class="cert-corner br">🏦</div>
-      <div class="cert-badge">🎓</div>
-      <div class="cert-issued">ForteBank · Сертификат об окончании симулятора</div>
+      <div class="cert-corner tl">💼</div>
+      <div class="cert-corner tr">💼</div>
+      <div class="cert-corner bl">💼</div>
+      <div class="cert-corner br">💼</div>
+      <img src="content/forte-business-light.svg" alt="Forte Business" class="cert-logo-center" />
+      <div class="cert-issued">ForteBank · Forte Business · Сертификат об окончании</div>
       <div class="cert-name">${esc(G.player.name)}</div>
       <div class="cert-text">
         успешно прошёл(а) игровой тренажёр консультанта<br>
