@@ -390,9 +390,10 @@ STATE = GameState()
 # ─────────────────────────────────────────────────────────────
 class ForteTrainingHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
-        # Prevent caching for live API and JSON files
-        if self.path.startswith('/api') or self.path.endswith('.json'):
-            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+        # Prevent caching for all files and API to ensure immediate live updates
+        self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, post-check=0, pre-check=0')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')

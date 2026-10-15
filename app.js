@@ -666,6 +666,9 @@ async function renderLogin(root) {
           <img src="content/forte-business-dark.svg" alt="Forte Business" class="login-logo-img" />
         </div>
         <h1 class="login-title">Forte Business <span>Quest</span></h1>
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(97,207,255,0.15);border:1.5px solid var(--fb-sky);color:var(--fb-sky);padding:4px 14px;border-radius:99px;font-size:12px;font-weight:800;margin-bottom:14px;letter-spacing:0.8px;">
+          <span>⚡ LIVE KAHOOT ARENA v2.5</span>
+        </div>
         <p class="login-subtitle">
           Синхронная обучающая платформа Forte Business по банковским гарантиям.<br>
           Введите PIN сессии от тренера, укажите ваш филиал и включитесь в соревнование!
