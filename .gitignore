@@ -3,6 +3,14 @@
 .DS_Store
 Thumbs.db
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local database / session data
+data/live_session.json
+
 # IDE and agent scratch
 .idea/
 .vscode/

@@ -1,8 +1,8 @@
 # ===========================================
 # Forte Quest Production Stack (Direct Traefik)
 # ===========================================
-# Static Nginx server connects directly to Traefik on platform-net.
-# No extra Node.js runtime required - served via ultra-fast Nginx Alpine.
+# Python HTTP Server connects directly to Traefik on platform-net.
+# Handles live filial stats, multiplayer lobby & visual novel training quest.
 #
 # Prerequisites (already created on host):
 #   docker network create platform-net
@@ -27,6 +27,11 @@ services:
       dockerfile: Dockerfile
     container_name: forte-frontend-app
     restart: unless-stopped
+    environment:
+      - PORT=80
+      - ADMIN_PASSWORD=forte2026
+    volumes:
+      - ./data:/app/data
     networks:
       - platform-net
     labels:
@@ -36,7 +41,7 @@ services:
       - "traefik.http.services.forte-frontend.loadbalancer.server.port=80"
       - "traefik.docker.network=platform-net"
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:80 >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:80/api/session >/dev/null || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 3

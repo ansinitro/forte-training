@@ -1,14 +1,17 @@
-FROM nginx:alpine
+FROM python:3.12-alpine
 
-# Remove default nginx config
-RUN rm /etc/nginx/conf.d/default.conf
+WORKDIR /app
 
-# Copy custom Nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Ensure unbuffered Python output for real-time docker logs
+ENV PYTHONUNBUFFERED=1
+ENV PORT=80
 
-# Copy static website assets
-COPY . /usr/share/nginx/html
+# Copy project files
+COPY . /app
+
+# Ensure data directory exists for state persistence
+RUN mkdir -p /app/data
 
 EXPOSE 80
 
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["python", "server.py"]

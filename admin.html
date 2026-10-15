@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forte Business — Панель тренера и битва филиалов</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    /* Specific Admin & TV/Projector Styles */
+    .admin-container {
+      max-width: 1380px; margin: 0 auto; padding: 24px 24px 80px;
+    }
+    .admin-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 16px; margin-bottom: 24px;
+      padding-bottom: 20px; border-bottom: 1.5px solid var(--border);
+    }
+    .admin-brand {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .admin-logo { height: 34px; width: auto; }
+    .admin-badge {
+      font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 800;
+      color: #031226; background: var(--fb-sky);
+      border-radius: 6px; padding: 4px 10px; letter-spacing: 1.5px;
+    }
+
+    /* Status Pill */
+    .status-indicator {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 18px; border-radius: 99px;
+      font-family: 'Outfit', sans-serif; font-size: 14px; font-weight: 900;
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .status-indicator.lobby {
+      background: rgba(240,197,79,0.15); border: 1.5px solid var(--fb-gold); color: var(--fb-gold);
+    }
+    .status-indicator.active {
+      background: rgba(16,217,138,0.15); border: 1.5px solid var(--green); color: var(--green);
+    }
+    .status-indicator.finished {
+      background: rgba(97,207,255,0.15); border: 1.5px solid var(--fb-sky); color: var(--fb-sky);
+    }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: currentColor; animation: pulse 1.5s infinite;
+    }
+
+    /* Action Controls */
+    .admin-controls-bar {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+      margin-bottom: 28px;
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px; margin-bottom: 32px;
+    }
+    .kpi-card {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 20px; padding: 22px 24px;
+      position: relative; overflow: hidden; box-shadow: var(--shadow);
+    }
+    .kpi-card::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--fb-sky);
+    }
+    .kpi-card.gold::before  { background: var(--fb-gold); }
+    .kpi-card.green::before { background: var(--green); }
+    .kpi-card.blue::before  { background: var(--fb-blue); }
+
+    .kpi-label {
+      font-size: 12px; font-weight: 800; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px;
+    }
+    .kpi-value {
+      font-family: 'Outfit', sans-serif; font-size: 36px; font-weight: 900;
+      color: #fff; line-height: 1.1; margin-bottom: 4px;
+    }
+    .kpi-sub { font-size: 13px; color: var(--text2); font-weight: 500; }
+
+    /* Battle & Leaderboard Grid */
+    .battle-grid {
+      display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px;
+      align-items: start; margin-bottom: 32px;
+    }
+    @media (max-width: 960px) {
+      .battle-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Filial Battle Cards */
+    .filial-battle-box {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 24px; padding: 28px; box-shadow: var(--shadow);
+    }
+    .section-header-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .filial-list {
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .filial-item {
+      background: var(--surface2); border: 1.5px solid var(--border);
+      border-radius: 16px; padding: 14px 18px;
+      display: flex; flex-direction: column; gap: 8px;
+      transition: all 0.25s ease;
+    }
+    .filial-item.rank-1 {
+      border-color: var(--fb-gold);
+      background: linear-gradient(135deg, rgba(240,197,79,0.12), var(--surface2));
+      box-shadow: 0 0 24px rgba(240,197,79,0.2);
+    }
+    .filial-item.rank-2 {
+      border-color: var(--fb-sky);
+      background: linear-gradient(135deg, rgba(97,207,255,0.1), var(--surface2));
+    }
+    .filial-item.rank-3 {
+      border-color: #f97316;
+      background: linear-gradient(135deg, rgba(249,115,22,0.1), var(--surface2));
+    }
+    .filial-item-top {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .filial-rank-name {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .filial-pos-badge {
+      font-family: 'Outfit', sans-serif; font-size: 15px; font-weight: 900;
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--surface3); color: var(--text2);
+    }
+    .filial-item.rank-1 .filial-pos-badge { background: var(--fb-gold); color: #031226; }
+    .filial-item.rank-2 .filial-pos-badge { background: var(--fb-sky); color: #031226; }
+    .filial-item.rank-3 .filial-pos-badge { background: #f97316; color: #fff; }
+
+    .filial-title {
+      font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 800; color: #fff;
+    }
+    .filial-metrics {
+      display: flex; align-items: baseline; gap: 14px;
+    }
+    .filial-median-pill {
+      font-family: 'Outfit', sans-serif; font-size: 18px; font-weight: 900;
+      color: var(--fb-sky);
+    }
+    .filial-count-tag {
+      font-size: 12px; color: var(--muted); font-weight: 600;
+    }
+    .filial-bar-rail {
+      height: 8px; background: var(--surface3); border-radius: 99px; overflow: hidden;
+    }
+    .filial-bar-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, var(--fb-blue), var(--fb-sky));
+      transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Player Leaderboard */
+    .player-leaderboard-box {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 24px; padding: 28px; box-shadow: var(--shadow);
+    }
+    .player-table {
+      width: 100%; border-collapse: collapse;
+    }
+    .player-table th {
+      text-align: left; font-size: 11px; font-weight: 800; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.6px; padding: 8px 12px;
+      border-bottom: 1.5px solid var(--border);
+    }
+    .player-table td {
+      padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 14px; vertical-align: middle;
+    }
+    .player-name-cell {
+      display: flex; align-items: center; gap: 10px; font-weight: 700;
+    }
+    .player-filial-tag {
+      display: inline-block; font-size: 11px; font-weight: 700;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 2px 8px; color: var(--fb-sky);
+    }
+
+    /* Live Feed */
+    .live-feed-box {
+      background: var(--surface); border: 1.5px solid var(--border);
+      border-radius: 20px; padding: 20px 24px;
+    }
+    .live-feed-list {
+      display: flex; flex-direction: column; gap: 8px; max-height: 180px; overflow-y: auto;
+    }
+    .feed-item {
+      font-size: 13.5px; color: var(--text2); display: flex; align-items: center; gap: 10px;
+    }
+    .feed-time { font-size: 11px; color: var(--muted); font-family: monospace; }
+  </style>
+</head>
+<body>
+  <div class="admin-container">
+    <!-- Top Bar -->
+    <header class="admin-topbar">
+      <div class="admin-brand">
+        <img src="content/forte-business-dark.svg" alt="Forte Business" class="admin-logo" />
+        <span class="admin-badge">TRAINER LIVE</span>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div class="status-indicator lobby" id="session-status-badge">
+          <span class="status-dot"></span>
+          <span id="session-status-text">ОЖИДАНИЕ (ЛОББИ)</span>
+        </div>
+        <div style="font-family:'Outfit',sans-serif;font-size:15px;color:var(--text2);">
+          Сессия: <strong id="session-id-display" style="color:var(--fb-sky);">...</strong>
+        </div>
+        <a href="/" target="_blank" class="btn btn-ghost" style="min-height:42px;padding:8px 16px;font-size:13px;">
+          🔗 Ссылка участника
+        </a>
+      </div>
+    </header>
+
+    <!-- Admin Controls Bar -->
+    <div class="admin-controls-bar">
+      <button class="btn btn-primary" id="btn-start" style="min-height:50px;">
+        🚀 Начать тестирование для всех
+      </button>
+      <button class="btn btn-ghost" id="btn-finish" style="min-height:50px;">
+        🏁 Завершить тест и показать итоги
+      </button>
+      <button class="btn btn-ghost" id="btn-reset" style="min-height:50px;">
+        🔄 Новая сессия / Сброс
+      </button>
+      <button class="btn btn-gold" id="btn-export" style="min-height:50px;margin-left:auto;">
+        📥 Скачать отчёт в Excel / CSV
+      </button>
+    </div>
+
+    <!-- Big KPI Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card gold">
+        <div class="kpi-label">🏆 Лидирующий филиал</div>
+        <div class="kpi-value" id="kpi-leader-filial">—</div>
+        <div class="kpi-sub" id="kpi-leader-sub">Медиана: — XP</div>
+      </div>
+
+      <div class="kpi-card green">
+        <div class="kpi-label">📊 Медиана по банку</div>
+        <div class="kpi-value" id="kpi-bank-median">0.0 <span style="font-size:20px;">XP</span></div>
+        <div class="kpi-sub" id="kpi-bank-avg">Среднее: 0.0 XP</div>
+      </div>
+
+      <div class="kpi-card blue">
+        <div class="kpi-label">👥 Подключено сотрудников</div>
+        <div class="kpi-value" id="kpi-total-players">0</div>
+        <div class="kpi-sub" id="kpi-filials-count">Филиалов: 0</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-label">🏁 Завершили тестирование</div>
+        <div class="kpi-value" id="kpi-finished-players">0</div>
+        <div class="kpi-sub" id="kpi-finished-pct">0% от всех участников</div>
+      </div>
+    </div>
+
+    <!-- Main Live Arena -->
+    <div class="battle-grid">
+      <!-- Left: Battle of Filials -->
+      <div class="filial-battle-box">
+        <div class="section-header-row">
+          <h2 style="font-size:22px;font-weight:900;display:flex;align-items:center;gap:10px;">
+            <span>🏢</span> Битва филиалов Forte (Рейтинг по медиане)
+          </h2>
+          <span style="font-size:12px;color:var(--muted);font-weight:700;">LIVE UPDATE</span>
+        </div>
+
+        <div class="filial-list" id="filial-list">
+          <div style="text-align:center;color:var(--muted);padding:40px 0;">
+            Ожидание подключения сотрудников...
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Individual Top Players -->
+      <div class="player-leaderboard-box">
+        <div class="section-header-row">
+          <h2 style="font-size:22px;font-weight:900;display:flex;align-items:center;gap:10px;">
+            <span>⭐</span> Топ сотрудников
+          </h2>
+          <span style="font-size:12px;color:var(--muted);font-weight:700;">ТОП-10</span>
+        </div>
+
+        <table class="player-table">
+          <thead>
+            <tr>
+              <th style="width:40px;">#</th>
+              <th>Сотрудник</th>
+              <th>Филиал</th>
+              <th style="text-align:right;">XP</th>
+            </tr>
+          </thead>
+          <tbody id="player-table-body">
+            <tr>
+              <td colspan="4" style="text-align:center;color:var(--muted);padding:30px 0;">
+                Нет участников
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Live Event Feed -->
+    <div class="live-feed-box">
+      <div style="font-size:12px;font-weight:800;color:var(--fb-sky);text-transform:uppercase;letter-spacing:0.6px;margin-bottom:10px;">
+        ⚡ Лента активности в реальном времени:
+      </div>
+      <div class="live-feed-list" id="live-feed-list">
+        <div class="feed-item" style="color:var(--muted);">Ожидание событий...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ADMIN_PWD = 'forte2026';
+    let pollInterval = null;
+
+    async function fetchStats() {
+      try {
+        const resp = await fetch('/api/stats?t=' + Date.now());
+        if (!resp.ok) return;
+        const data = await resp.json();
+        renderDashboard(data);
+      } catch (e) {
+        console.error('Fetch error:', e);
+      }
+    }
+
+    function renderDashboard(data) {
+      // Status Badge
+      const statusBadge = document.getElementById('session-status-badge');
+      const statusText  = document.getElementById('session-status-text');
+      const sessId      = document.getElementById('session-id-display');
+
+      sessId.textContent = data.sessionId || '—';
+      if (data.status === 'lobby') {
+        statusBadge.className = 'status-indicator lobby';
+        statusText.textContent = '⏳ ОЖИДАНИЕ (ЛОББИ)';
+      } else if (data.status === 'active') {
+        statusBadge.className = 'status-indicator active';
+        statusText.textContent = '⚡ ИДЁТ ТЕСТИРОВАНИЕ';
+      } else {
+        statusBadge.className = 'status-indicator finished';
+        statusText.textContent = '🏁 ТЕСТ ЗАВЕРШЁН';
+      }
+
+      // KPI
+      document.getElementById('kpi-bank-median').innerHTML = `${data.bankMedianXP} <span style="font-size:20px;">XP</span>`;
+      document.getElementById('kpi-bank-avg').textContent = `Среднее: ${data.bankAvgXP} XP`;
+      document.getElementById('kpi-total-players').textContent = data.totalPlayers;
+      document.getElementById('kpi-filials-count').textContent = `Филиалов: ${data.filials.length}`;
+      document.getElementById('kpi-finished-players').textContent = data.finishedPlayers;
+
+      const pct = data.totalPlayers > 0 ? Math.round((data.finishedPlayers / data.totalPlayers) * 100) : 0;
+      document.getElementById('kpi-finished-pct').textContent = `${pct}% от всех участников`;
+
+      // Top Filial
+      const topFilial = data.filials[0];
+      if (topFilial) {
+        document.getElementById('kpi-leader-filial').textContent = topFilial.filial;
+        document.getElementById('kpi-leader-sub').textContent = `Медиана: ${topFilial.medianXP} XP (${topFilial.count} чел.)`;
+      } else {
+        document.getElementById('kpi-leader-filial').textContent = '—';
+        document.getElementById('kpi-leader-sub').textContent = 'Медиана: —';
+      }
+
+      // Filial Battle List
+      const filialContainer = document.getElementById('filial-list');
+      if (data.filials.length === 0) {
+        filialContainer.innerHTML = `
+          <div style="text-align:center;color:var(--muted);padding:40px 0;">
+            Ожидание подключения сотрудников по филиалам...
+          </div>
+        `;
+      } else {
+        const maxMed = Math.max(...data.filials.map(f => f.medianXP), 1);
+        filialContainer.innerHTML = data.filials.map(f => {
+          const rankCls = f.rank <= 3 ? `rank-${f.rank}` : '';
+          const barWidth = Math.min(100, Math.max(10, Math.round((f.medianXP / maxMed) * 100)));
+          const medal = f.rank === 1 ? '🥇' : f.rank === 2 ? '🥈' : f.rank === 3 ? '🥉' : f.rank;
+
+          return `
+            <div class="filial-item ${rankCls}">
+              <div class="filial-item-top">
+                <div class="filial-rank-name">
+                  <div class="filial-pos-badge">${medal}</div>
+                  <div class="filial-title">${esc(f.filial)}</div>
+                </div>
+                <div class="filial-metrics">
+                  <span class="filial-median-pill">${f.medianXP} XP</span>
+                  <span class="filial-count-tag">${f.count} чел.</span>
+                </div>
+              </div>
+              <div class="filial-bar-rail">
+                <div class="filial-bar-fill" style="width:${barWidth}%;"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Player Leaderboard Table
+      const pTable = document.getElementById('player-table-body');
+      if (data.leaderboard.length === 0) {
+        pTable.innerHTML = `<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:30px 0;">Нет участников</td></tr>`;
+      } else {
+        pTable.innerHTML = data.leaderboard.slice(0, 10).map((p, idx) => {
+          const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1;
+          return `
+            <tr>
+              <td style="font-weight:800;color:${idx < 3 ? 'var(--fb-sky)' : 'var(--muted)'};">${medal}</td>
+              <td>
+                <div class="player-name-cell">
+                  <span style="font-size:20px;">${p.avatar || '👤'}</span>
+                  <span>${esc(p.name)}</span>
+                </div>
+              </td>
+              <td>
+                <span class="player-filial-tag">${esc(p.filial)}</span>
+              </td>
+              <td style="text-align:right;font-family:'Outfit',sans-serif;font-weight:900;color:var(--fb-sky);font-size:16px;">
+                ${p.xp}
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Live Feed
+      const feedContainer = document.getElementById('live-feed-list');
+      if (data.recentEvents && data.recentEvents.length > 0) {
+        feedContainer.innerHTML = data.recentEvents.slice().reverse().map(ev => `
+          <div class="feed-item">
+            <span class="feed-time">${esc(ev.time)}</span>
+            <span>${esc(ev.text)}</span>
+          </div>
+        `).join('');
+      }
+    }
+
+    const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+      ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+
+    // Actions
+    document.getElementById('btn-start').addEventListener('click', async () => {
+      if (!confirm('Запустить тестирование для всех подключенных участников?')) return;
+      await fetch('/api/admin/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: ADMIN_PWD })
+      });
+      fetchStats();
+    });
+
+    document.getElementById('btn-finish').addEventListener('click', async () => {
+      if (!confirm('Завершить тестирование и подвести итоги битвы филиалов?')) return;
+      await fetch('/api/admin/finish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: ADMIN_PWD })
+      });
+      fetchStats();
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', async () => {
+      if (!confirm('Сбросить текущую сессию и открыть чистое лобби для новой группы?')) return;
+      await fetch('/api/admin/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: ADMIN_PWD })
+      });
+      fetchStats();
+    });
+
+    document.getElementById('btn-export').addEventListener('click', () => {
+      window.location.href = `/api/admin/export?pwd=${ADMIN_PWD}`;
+    });
+
+    // Start live polling every 2 seconds
+    fetchStats();
+    pollInterval = setInterval(fetchStats, 2000);
+  </script>
+</body>
+</html>

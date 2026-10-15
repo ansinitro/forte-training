@@ -30,6 +30,28 @@ const CLIENT_PROFILES = {
 
 const PLAYER_AVATARS = ['👨‍💼','👩‍💼','👨‍💻','👩‍💻','🧑‍🏫','👩‍🏫','🧔','👱','🧑‍💼','👳'];
 
+const FILIALS = [
+  'Алматы',
+  'Астана',
+  'Шымкент',
+  'Караганда',
+  'Актобе',
+  'Атырау',
+  'Актау',
+  'Павлодар',
+  'Усть-Каменогорск',
+  'Костанай',
+  'Уральск',
+  'Петропавловск',
+  'Кызылорда',
+  'Тараз',
+  'Семей',
+  'Туркестан',
+  'Талдыкорган',
+  'ЦБО / Головной офис',
+  'Другой филиал / Онлайн'
+];
+
 // ─────────────────────────────────────────────────────────────
 // WEB AUDIO API SOUND SYSTEM (100% Native, 0 latency)
 // ─────────────────────────────────────────────────────────────
@@ -266,12 +288,14 @@ function buildHUD() {
     <div class="hud-av">${esc(G.player.avatar)}</div>
     <div class="hud-name">${esc(G.player.name)}</div>
     <div class="hud-rank">${esc(rank.icon)} ${esc(rank.name)}</div>
+    ${G.player.filial ? `<div class="hud-rank" style="color:var(--fb-sky);background:var(--fb-sky-dim);border-color:var(--fb-sky);">🏢 ${esc(G.player.filial)}</div>` : ''}
     
     <div class="hud-pill">
       <span class="hud-pill-lbl">XP</span>
       <span class="hud-pill-val" id="hud-xp">${G.progress.xp}</span>
     </div>
 
+    <button class="hud-btn" id="hud-battle" title="Посмотреть рейтинг филиалов">🏢 Битва филиалов</button>
     <button class="hud-btn" id="hud-sound" title="Включить / отключить звук">
       ${Sound.muted ? '🔇 Звук: ВЫКЛ' : '🔊 Звук: ВКЛ'}
     </button>
@@ -280,6 +304,9 @@ function buildHUD() {
 
   hud.querySelector('#hud-home').addEventListener('click', e => { e.preventDefault(); Sound.playClick(); go(renderMap); });
   hud.querySelector('#hud-lb').addEventListener('click', () => { Sound.playClick(); go(renderLeaderboard); });
+
+  const battleBtn = hud.querySelector('#hud-battle');
+  if (battleBtn) battleBtn.addEventListener('click', showFilialBattleModal);
 
   const soundBtn = hud.querySelector('#hud-sound');
   soundBtn.addEventListener('click', () => {
@@ -295,6 +322,87 @@ function refreshHUDxp() {
   const el = document.getElementById('hud-xp');
   if (el) el.textContent = G.progress.xp;
 }
+
+// ─────────────────────────────────────────────────────────────
+// LIVE MULTIPLAYER & FILIAL SYNC
+// ─────────────────────────────────────────────────────────────
+async function syncProgress(xp, stage, isFinished = false) {
+  if (!G.playerId) return;
+  try {
+    await fetch('/api/progress', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        playerId: G.playerId,
+        xp: xp,
+        stage: stage,
+        finished: isFinished
+      })
+    });
+  } catch (e) {}
+}
+
+async function showFilialBattleModal() {
+  Sound.playClick();
+  const ov = document.createElement('div');
+  ov.className = 'battle-modal-overlay';
+  ov.innerHTML = `
+    <div class="battle-modal-card">
+      <button class="battle-modal-close" id="modal-close">✕</button>
+      <h2 style="font-size:24px;font-weight:900;margin-bottom:6px;display:flex;align-items:center;gap:10px;">
+        <span>🏢</span> Битва филиалов Forte
+      </h2>
+      <p style="color:var(--text2);font-size:14px;margin-bottom:20px;">
+        Рейтинг городов по медиане набранных баллов в реальном времени
+      </p>
+      <div id="modal-filials-list" style="display:flex;flex-direction:column;gap:10px;">
+        <div style="text-align:center;color:var(--muted);padding:24px 0;">Загрузка данных с сервера...</div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(ov);
+  ov.querySelector('#modal-close').addEventListener('click', () => ov.remove());
+  ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+
+  try {
+    const resp = await fetch('/api/stats?t=' + Date.now());
+    if (resp.ok) {
+      const data = await resp.json();
+      const list = ov.querySelector('#modal-filials-list');
+      if (!data.filials || data.filials.length === 0) {
+        list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px 0;">Пока нет подключенных филиалов</div>';
+      } else {
+        const maxMed = Math.max(...data.filials.map(f => f.medianXP), 1);
+        list.innerHTML = data.filials.map(f => {
+          const isMy = G.player && f.filial === G.player.filial;
+          const barWidth = Math.min(100, Math.max(10, Math.round((f.medianXP / maxMed) * 100)));
+          const medal = f.rank === 1 ? '🥇' : f.rank === 2 ? '🥈' : f.rank === 3 ? '🥉' : f.rank;
+          return `
+            <div class="filial-item ${f.rank <= 3 ? 'rank-' + f.rank : ''}" style="${isMy ? 'border-color:var(--fb-sky);background:var(--fb-sky-dim);' : ''}">
+              <div class="filial-item-top">
+                <div class="filial-rank-name">
+                  <div class="filial-pos-badge">${medal}</div>
+                  <div class="filial-title">${esc(f.filial)}${isMy ? ' <span style="font-size:12px;color:var(--fb-sky);">(ваш филиал)</span>' : ''}</div>
+                </div>
+                <div class="filial-metrics">
+                  <span class="filial-median-pill">${f.medianXP} XP</span>
+                  <span class="filial-count-tag">${f.count} чел.</span>
+                </div>
+              </div>
+              <div class="filial-bar-rail">
+                <div class="filial-bar-fill" style="width:${barWidth}%;"></div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+  } catch (e) {
+    const list = ov.querySelector('#modal-filials-list');
+    if (list) list.innerHTML = '<div style="text-align:center;color:var(--muted);padding:20px 0;">Локальный режим (сервер недоступен)</div>';
+  }
+}
+
 
 // ─────────────────────────────────────────────────────────────
 // TYPEWRITER ENGINE
@@ -374,6 +482,11 @@ function renderLogin(root) {
         <input class="field-input" id="pname" type="text"
           placeholder="Например: Дамир Сейткали" maxlength="40" autocomplete="name" />
 
+        <label class="field-label" for="pfilial">Ваш филиал (город)</label>
+        <select class="field-select" id="pfilial">
+          ${FILIALS.map(f => `<option value="${esc(f)}">${esc(f)}</option>`).join('')}
+        </select>
+
         <span class="avatar-label">Выберите персонажа</span>
         <div class="avatar-grid" id="av-grid">
           ${PLAYER_AVATARS.map((a,i) => `
@@ -382,17 +495,22 @@ function renderLogin(root) {
         </div>
 
         <button class="btn btn-gold btn-full" id="start-btn" style="font-size:18px;min-height:60px;" disabled>
-          ▶ Начать игру
+          ▶ Подключиться к тренингу
         </button>
       </div>
     </div>
   `;
 
-  const nameInput = root.querySelector('#pname');
-  const startBtn  = root.querySelector('#start-btn');
+  const nameInput   = root.querySelector('#pname');
+  const filialInput = root.querySelector('#pfilial');
+  const startBtn    = root.querySelector('#start-btn');
 
   const last = loadAllPlayers().slice(-1)[0];
-  if (last) { nameInput.value = last.name; selectedAvatar = last.avatar || selectedAvatar; }
+  if (last) {
+    nameInput.value = last.name;
+    selectedAvatar = last.avatar || selectedAvatar;
+    if (last.filial) filialInput.value = last.filial;
+  }
 
   nameInput.addEventListener('input', () => { startBtn.disabled = nameInput.value.trim().length < 2; });
   if (nameInput.value.trim().length >= 2) startBtn.disabled = false;
@@ -408,18 +526,99 @@ function renderLogin(root) {
     });
   });
 
-  startBtn.addEventListener('click', () => {
+  startBtn.addEventListener('click', async () => {
     const name = nameInput.value.trim();
+    const filial = filialInput.value;
     if (name.length < 2) return;
     Sound.playClick();
+    startBtn.disabled = true;
+    startBtn.textContent = '⏳ Подключение...';
+
     const existing = loadAllPlayers().find(p => p.name === name);
-    G.player   = { name, avatar: existing?.avatar || selectedAvatar };
+    G.player   = { name, avatar: existing?.avatar || selectedAvatar, filial };
     G.progress = loadPlayer(name);
+
+    // Register on live training server
+    try {
+      const resp = await fetch('/api/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, avatar: G.player.avatar, filial })
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        G.playerId = data.playerId;
+        if (data.status === 'lobby') {
+          go(renderLobbyWait);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Running in standalone mode:', e);
+    }
+
     go(renderMap);
   });
 
   nameInput.focus();
 }
+
+// ─────────────────────────────────────────────────────────────
+// SCREEN: LOBBY WAIT (KAHOOT STYLE)
+// ─────────────────────────────────────────────────────────────
+function renderLobbyWait(root) {
+  let timer = null;
+  root.innerHTML = `
+    <div class="lobby-screen">
+      <div class="login-bg"></div>
+      <div class="lobby-card animate-in">
+        <div class="lobby-pulse-wrap">
+          <span>📡</span>
+        </div>
+        <h1 class="lobby-title">Ожидаем команду тренера...</h1>
+        <p class="lobby-sub">
+          Вы успешно подключились к тренингу Forte Business. Когда тренер нажмёт «Начать тестирование», игра стартует автоматически!
+        </p>
+
+        <div class="lobby-player-pill">
+          <span style="font-size:22px;">${esc(G.player.avatar)}</span>
+          <span style="font-size:16px;">${esc(G.player.name)}</span>
+          <span class="lobby-filial-badge">${esc(G.player.filial)}</span>
+        </div>
+
+        <div class="lobby-stats-box">
+          <div class="lobby-stats-number" id="lobby-player-count">...</div>
+          <div class="lobby-stats-lbl">сотрудников сейчас в лобби</div>
+        </div>
+
+        <div style="font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:center;gap:8px;">
+          <span class="status-dot"></span>
+          <span>Живая синхронизация с сервером активна</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  async function checkLobby() {
+    try {
+      const resp = await fetch('/api/stats?t=' + Date.now());
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const countEl = root.querySelector('#lobby-player-count');
+      if (countEl) countEl.textContent = data.totalPlayers;
+
+      if (data.status === 'active') {
+        clearInterval(timer);
+        Sound.playVictory();
+        go(renderMap);
+      }
+    } catch (e) {}
+  }
+
+  checkLobby();
+  timer = setInterval(checkLobby, 1500);
+}
+
 
 // ─────────────────────────────────────────────────────────────
 // SCREEN: MAP / CASES
@@ -816,6 +1015,9 @@ function renderConvo(root, caseData) {
       const deltaTrust = opt.score * 0.6;
       trust = Math.max(0, Math.min(100, trust + deltaTrust));
 
+      // Real-time sync with trainer session
+      syncProgress(G.progress.xp + opt.score, stageIdx + 1, false);
+
       // Audio feedback
       if (opt.correct) Sound.playCorrect();
       else Sound.playMistake();
@@ -950,6 +1152,9 @@ function renderResult(root, caseData, scorePct, reviews) {
   savePlayer();
   refreshHUDxp();
 
+  // Sync completion with trainer server
+  syncProgress(G.progress.xp, caseData.stages.length, true);
+
   const oldRank  = getRank(oldXP);
   const newRank  = getRank(G.progress.xp);
   const rankedUp = newRank.name !== oldRank.name;
@@ -983,6 +1188,35 @@ function renderResult(root, caseData, scorePct, reviews) {
       ${gain < xpEarned ? `<p style="color:var(--muted);font-size:12px;margin-top:10px;">Повторное прохождение засчитывает прирост опыта.</p>` : ''}
     </div>
 
+    <!-- Filial Rating & Real-time Live Engagement Card -->
+    <div class="filial-comp-box" id="result-filial-comp">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+        <div style="font-weight:800;font-size:16px;color:#fff;display:flex;align-items:center;gap:8px;">
+          <span>🏢</span>
+          <span>Вклад в рейтинг филиала: <strong style="color:var(--fb-sky);">${esc(G.player.filial || 'Алматы')}</strong></span>
+        </div>
+        <button class="btn btn-ghost" id="open-filials-btn" style="padding:6px 14px;font-size:13px;">
+          📊 Турнирная таблица филиалов
+        </button>
+      </div>
+      <div class="filial-comp-row">
+        <span style="color:var(--text2);font-size:14px;">Ваш результат за этот кейс:</span>
+        <strong style="color:var(--fb-sky);font-size:15px;">${Math.round(scorePct)}% (${gain > 0 ? '+' + gain : 0} XP)</strong>
+      </div>
+      <div class="filial-comp-row">
+        <span style="color:var(--text2);font-size:14px;">Медиана вашего филиала:</span>
+        <strong id="filial-median-stat" style="color:#fff;font-size:15px;">Считаем...</strong>
+      </div>
+      <div class="filial-comp-row">
+        <span style="color:var(--text2);font-size:14px;">Медиана по всему Forte:</span>
+        <strong id="bank-median-stat" style="color:var(--fb-sky);font-size:15px;">Считаем...</strong>
+      </div>
+      <div class="filial-comp-row">
+        <span style="color:var(--text2);font-size:14px;">Текущая позиция филиала:</span>
+        <strong id="filial-rank-stat" style="color:var(--gold);font-size:15px;">Считаем...</strong>
+      </div>
+    </div>
+
     <!-- Correct product reveal -->
     <div class="correct-product-box">
       <div class="correct-product-icon">✅</div>
@@ -1007,6 +1241,39 @@ function renderResult(root, caseData, scorePct, reviews) {
     <div class="review-section" id="review-area"></div>
   `;
   root.appendChild(main);
+
+  const openFilialsBtn = main.querySelector('#open-filials-btn');
+  if (openFilialsBtn) {
+    openFilialsBtn.addEventListener('click', () => showFilialBattleModal());
+  }
+
+  // Fetch filial median vs bank median in real-time
+  fetch('/api/stats')
+    .then(r => r.json())
+    .then(data => {
+      const myFilial = G.player.filial || 'Алматы';
+      const fStat = (data.filials || []).find(f => f.name === myFilial);
+      const fRank = (data.filials || []).findIndex(f => f.name === myFilial) + 1;
+
+      const fMedEl = main.querySelector('#filial-median-stat');
+      const bMedEl = main.querySelector('#bank-median-stat');
+      const fRankEl = main.querySelector('#filial-rank-stat');
+
+      if (fMedEl) fMedEl.textContent = fStat ? `${fStat.median_xp} XP (участников: ${fStat.count})` : `${G.progress.xp} XP`;
+      if (bMedEl) bMedEl.textContent = `${data.bank_median_xp || 0} XP`;
+      if (fRankEl) {
+        if (fRank > 0) {
+          const medal = fRank === 1 ? '🥇' : fRank === 2 ? '🥈' : fRank === 3 ? '🥉' : '📍';
+          fRankEl.innerHTML = `${medal} ${fRank}-е место из ${data.filials.length}`;
+        } else {
+          fRankEl.textContent = '1-е место';
+        }
+      }
+    })
+    .catch(() => {
+      const fMedEl = main.querySelector('#filial-median-stat');
+      if (fMedEl) fMedEl.textContent = `${G.progress.xp} XP`;
+    });
 
   const revArea = main.querySelector('#review-area');
   reviews.forEach(r => {
