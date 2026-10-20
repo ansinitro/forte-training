@@ -320,6 +320,7 @@
               <option value="4">Кейс 4: Корпорация (Владимир Ильич / 600 млн)</option>
               <option value="5">Кейс 5: Нерезидент РК (Alex / 20 млн)</option>
               <option value="6">Кейс 6: Связанное лицо (Данияр / лимит 20 млн)</option>
+              <option value="7">Кейс 7: Онлайн-выпуск и площадки (Айгуль / электронные закупки)</option>
             </select>
 
             <div style="display:flex;align-items:center;gap:6px;" id="timer-presets">
@@ -462,11 +463,39 @@
       ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 
     async function init() {
+      await loadDynamicCases();
       setupFilialChips();
       setupTimerPresets();
       setupEventListeners();
       await fetchStats();
       pollInterval = setInterval(fetchStats, 1500);
+    }
+
+    async function loadDynamicCases() {
+      try {
+        const resp = await fetch('/all-cases.json?t=' + Date.now());
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const cases = data.cases || [];
+        if (!cases.length) return;
+        const select = document.getElementById('select-case');
+        const currentVal = select.value;
+        select.innerHTML = '';
+        cases.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          const clientName = c.client ? c.client.split('(')[0].trim() : '';
+          const clientBrief = c.client ? (c.client.match(/\(([^)]+)\)/)?.[1] || c.client) : '';
+          const titleShort = c.title ? (c.title.length > 32 ? c.title.slice(0, 32) + '...' : c.title) : '';
+          opt.textContent = `Кейс ${c.id}: ${titleShort} (${clientName || clientBrief})`;
+          select.appendChild(opt);
+        });
+        if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
+          select.value = currentVal;
+        }
+      } catch (e) {
+        console.warn('Could not dynamically load cases:', e);
+      }
     }
 
     function setupFilialChips() {
@@ -583,7 +612,8 @@
       // Next Round Button
       document.getElementById('btn-next-round').addEventListener('click', () => {
         const select = document.getElementById('select-case');
-        const nextVal = Math.min(6, (parseInt(select.value, 10) || 1) + 1);
+        const maxVal = select.options.length ? parseInt(select.options[select.options.length - 1].value, 10) : 7;
+        const nextVal = Math.min(maxVal, (parseInt(select.value, 10) || 1) + 1);
         select.value = nextVal;
         document.getElementById('btn-start-round').click();
       });

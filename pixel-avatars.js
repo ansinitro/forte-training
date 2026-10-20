@@ -227,7 +227,7 @@ function getPixelAvatarSvg(caseId) {
     parts.push(rect(10, 21, 2, 7, '#172554'));
     parts.push(rect(16, 21, 2, 7, '#172554'));
 
-  } else {
+  } else if (cid === 6) {
     // Case 6: Данияр (Forte-Партнёр / VIP) — Black suit, gold Forte pin, elite styling
     const HAIR = '#09090B';
     const TUX = '#0F172A';
@@ -263,6 +263,61 @@ function getPixelAvatarSvg(caseId) {
     parts.push(rect(17, 21, 2, 7, LAPEL));
     parts.push(rect(7, 23, 2, 2, GOLD));
     parts.push(rect(18, 22, 2, 1, '#61CFFF'));
+
+  } else {
+    // Case 7 & Default: Айгуль (Электронные закупки / Онлайн-выпуск) — Modern procurement specialist
+    const HAIR = '#1E1B18';
+    const HAIR_LIGHT = '#3E2F28';
+    const TEAL_SUIT = '#0F766E';
+    const TEAL_ACCENT = '#0D9488';
+    const CYAN = '#0EA5E9';
+    const LIP = '#E11D48';
+
+    // Top Bun & Hairclip
+    parts.push(rect(11, 1, 6, 3, HAIR));
+    parts.push(rect(12, 2, 4, 1, HAIR_LIGHT));
+    parts.push(rect(16, 2, 2, 2, '#F59E0B'));
+
+    // Hair Back & Bangs
+    parts.push(rect(6, 4, 16, 14, HAIR));
+    parts.push(rect(5, 7, 18, 11, HAIR));
+    parts.push(rect(7, 3, 14, 4, HAIR));
+    parts.push(rect(8, 4, 12, 2, HAIR_LIGHT));
+    parts.push(rect(6, 6, 3, 9, HAIR));
+    parts.push(rect(19, 6, 3, 9, HAIR));
+
+    // Face & Neck
+    parts.push(rect(8, 7, 12, 11, SKIN_BASE));
+    parts.push(rect(9, 18, 10, 2, SKIN_SHADOW));
+    parts.push(rect(11, 18, 6, 3, SKIN_BASE));
+
+    // Earrings
+    parts.push(rect(6, 14, 2, 2, '#38BDF8'));
+    parts.push(rect(20, 14, 2, 2, '#38BDF8'));
+
+    // Eyes
+    parts.push(`<g class="pixel-eyes">${rect(10, 11, 2, 2, "#0F172A")}${rect(16, 11, 2, 2, "#0F172A")}</g>`);
+
+    // Modern Smart Glasses
+    parts.push(`<g class="pixel-glasses">${rect(9, 10, 4, 1, CYAN)}${rect(9, 13, 4, 1, CYAN)}${rect(9, 10, 1, 4, CYAN)}${rect(12, 10, 1, 4, CYAN)}${rect(13, 11, 2, 1, CYAN)}${rect(15, 10, 4, 1, CYAN)}${rect(15, 13, 4, 1, CYAN)}${rect(15, 10, 1, 4, CYAN)}${rect(18, 10, 1, 4, CYAN)}</g>`);
+
+    // Nose
+    parts.push(rect(13, 13, 2, 1, SKIN_SHADOW));
+
+    // Expressive Mouths
+    parts.push(`<g class="mouth-closed">${rect(12, 15, 4, 1, LIP)}</g>`);
+    parts.push(`<g class="mouth-open">${rect(12, 15, 4, 3, "#450A0A")}${rect(13, 16, 2, 1, "#FB7185")}</g>`);
+    parts.push(`<g class="mouth-happy">${rect(11, 15, 1, 1, LIP)}${rect(12, 16, 4, 1, LIP)}${rect(16, 15, 1, 1, LIP)}</g>`);
+    parts.push(`<g class="mouth-skeptical">${rect(11, 16, 1, 1, LIP)}${rect(12, 15, 4, 1, LIP)}${rect(16, 16, 1, 1, LIP)}</g>`);
+
+    // Modern Professional Teal Suit + Mint Blouse + Forte Digital ID
+    parts.push(rect(4, 21, 20, 7, TEAL_SUIT));
+    parts.push(rect(11, 21, 6, 7, '#F0FDFA'));
+    parts.push(rect(12, 22, 4, 6, '#14B8A6'));
+    parts.push(rect(9, 21, 2, 7, TEAL_ACCENT));
+    parts.push(rect(17, 21, 2, 7, TEAL_ACCENT));
+    parts.push(rect(7, 23, 2, 3, '#F59E0B'));
+    parts.push(rect(18, 22, 2, 1, '#38BDF8'));
   }
 
   return `<svg viewBox="0 0 28 28" class="pixel-avatar-svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Клиент ${cid}">\n${parts.join('')}\n</svg>`;

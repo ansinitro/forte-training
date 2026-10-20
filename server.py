@@ -412,6 +412,11 @@ class ForteTrainingHandler(SimpleHTTPRequestHandler):
             self.path = '/admin.html'
             return super().do_GET()
 
+        # Route /quest to index.html
+        if path == '/quest' or path == '/quest/':
+            self.path = '/index.html'
+            return super().do_GET()
+
         # API: Session status & summary
         if path == '/api/session':
             return self.send_json(STATE.get_session_summary())

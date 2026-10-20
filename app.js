@@ -16,9 +16,9 @@ const RANKS = [
   { xp: 580, name: 'Мастер гарантий', icon: '💎', color: '#a78bfa' },
 ];
 
-const CASE_COLORS = ['blue', 'amber', 'purple', 'teal', 'red', 'green'];
+const CASE_COLORS = ['blue', 'amber', 'purple', 'teal', 'red', 'green', 'indigo'];
 
-// Archetypes and visual assets for the 6 clients
+// Archetypes and visual assets for the clients
 const CLIENT_PROFILES = {
   1: { archetype: 'Поставщик госзакупок', avatar: '👩‍💼', title: 'Директор компании' },
   2: { archetype: 'Генподрядчик Самрук-Казына', avatar: '👷‍♂️', title: 'Главный инженер ТОО' },
@@ -26,6 +26,7 @@ const CLIENT_PROFILES = {
   4: { archetype: 'Корпоративный застройщик', avatar: '👔', title: 'Финансовый директор АО' },
   5: { archetype: 'Иностранный нерезидент', avatar: '🌐', title: 'Представитель зарубежного филиала' },
   6: { archetype: 'Связанное лицо / Партнёр', avatar: '💎', title: 'Премиум-партнёр ForteBank' },
+  7: { archetype: 'Электронные платформы / Тендеры', avatar: '👩‍💻', title: 'Специалист по закупкам' },
 };
 
 const PLAYER_AVATARS = ['👨‍💼','👩‍💼','👨‍💻','👩‍💻','🧑‍🏫','👩‍🏫','🧔','👱','🧑‍💼','👳'];
@@ -285,6 +286,7 @@ const Voice = {
         4: { gender: 'male',   pitch: 0.72, rate: 0.90 },
         5: { gender: 'male',   pitch: 1.00, rate: 1.00 },
         6: { gender: 'male',   pitch: 0.88, rate: 0.98 },
+        7: { gender: 'female', pitch: 1.10, rate: 1.04 },
       };
       const cfg = configs[Number(caseId)] || { pitch: 1.0, rate: 1.0 };
       u.pitch = cfg.pitch;
