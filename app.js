@@ -995,6 +995,19 @@ function renderMap(root) {
 // SCREEN: VISUAL NOVEL CONVERSATION GAME
 // ─────────────────────────────────────────────────────────────
 function renderConvo(root, caseData, roundOptions = {}) {
+  // Randomize answer positions for this conversation session so choices are dynamically distributed
+  caseData = {
+    ...caseData,
+    stages: (caseData.stages || []).map(stg => {
+      const opts = (stg.options || []).slice();
+      for (let i = opts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [opts[i], opts[j]] = [opts[j], opts[i]];
+      }
+      return { ...stg, options: opts };
+    })
+  };
+
   const isRound = !!(roundOptions && roundOptions.roundMode);
   const hud = buildHUD({ roundMode: isRound, caseId: caseData.id });
   root.appendChild(hud);
